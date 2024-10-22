@@ -7,7 +7,7 @@ view = viewPure
 
 
 viewPure :: GameState -> IO Picture
-viewPure gameState@GameState {infoToShow = a, pacman = (Pac {pacPos = (c,d),pacDir = _, pacDesDir = _, pacLives = _})} = do
+viewPure gameState@GameState {pacman = (Pac {pacPos = (c,d),pacDir = _, pacDesDir = _, pacLives = _})} = do
     mappy <- giveBitMap "map"
     pacman <- giveBitMap "Pac-Man"
     let pacManWithMap = Pictures [mappy, translate c d pacman]  -- Adjust (x, y) as needed
