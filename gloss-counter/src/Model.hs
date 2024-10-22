@@ -29,8 +29,8 @@ data Fruit = Banana | Apple | BlueBerry | Grape
 data Score = Sc {currScore :: Int, highScoreName :: String, highScore :: Int}
 
 
-initialState :: Picture -> GameState
-initialState a = GameState 
+initialState :: GameState
+initialState = GameState 
  [
     ((0, 0), Wall),   ((0, 1), Wall),   ((0, 2), Wall),   ((0, 3), Wall),   ((0, 4), Wall),   ((0, 5), Wall),   ((0, 6), Wall),
     ((1, 0), Wall),   ((1, 1), Pellet), ((1, 2), Empty),  ((1, 3), Empty),  ((1, 4), Pellet), ((1, 5), Fruit),  ((1, 6), Wall),

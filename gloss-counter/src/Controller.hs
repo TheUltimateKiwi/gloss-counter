@@ -21,8 +21,8 @@ input e gstate = return (inputKey e gstate)
 
 inputKey :: Event -> GameState -> GameState
 inputKey (EventKey (SpecialKey c) _ _ _) gstate@GameState{pacman = (Pac {pacPos = (x,y),pacDir = a, pacDesDir = b, pacLives = d}), elapsedTime = qq} 
-  | c == KeyLeft = gstate { pacman = (Pac {pacPos = (x-5,y)})} 
-  | c == KeyRight = gstate { pacman = (Pac {pacPos = (x+5,y)})} 
-  | c == KeyUp = gstate  { pacman = (Pac {pacPos = (x,y+5)})} 
-  | c == KeyDown = gstate { pacman = (Pac {pacPos = (x,y-5)})} 
+  | c == KeyLeft = gstate { pacman = (Pac {pacPos = (x-10,y)})} 
+  | c == KeyRight = gstate { pacman = (Pac {pacPos = (x+10,y)})} 
+  | c == KeyUp = gstate  { pacman = (Pac {pacPos = (x,y+10)})} 
+  | c == KeyDown = gstate { pacman = (Pac {pacPos = (x,y-10)})} 
 inputKey _ gstate = gstate -- Otherwise keep the same.
