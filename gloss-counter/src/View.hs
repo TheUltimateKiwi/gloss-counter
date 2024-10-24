@@ -24,10 +24,10 @@ viewPure gameState@GameState {grid = grid_ ,pacman = Pac {pacPos = (c,d)},score 
     let ghostsPicture = Pictures [translate (-20) 0 yellow_,translate (-40) 0 red_,translate (-60) 0 blue_,translate (-80) 0 pink_]
 
 
-    let pacManWithMap = Pictures [gridPicture, translate c d pacman, ghostsPicture, scoretxt]
-    
+    let pacManWithMap = Pictures [gridPicture, ghostsPicture, translate c d pacman, scoretxt]
+
     return pacManWithMap
-    
+
     where
         scoretxt     = Pictures [translate (-40) 80 $ scale 0.3 0.3 $ color white $ Text ("Score  " ++ show score_), highscoretxt]
         highscoretxt = translate (-40) 40 $ scale 0.15 0.15 $ color white $ Text ("HighScore  " ++ show highScore_)
@@ -67,8 +67,8 @@ stringToGrid str = concat _indexfieldlsit
     linestr = lines str
 
 smth:: (Float,[(Float, Field)]) -> [Square]
-smth (y,(x,f):[]) = [((x,y),f)]
-smth (y,(x,f):xs) = ((x,y),f) : smth (y,xs)  
+smth (y,[]) = []
+smth (y,(x,f):xs) = ((x,y),f) : smth (y,xs)
 
 charToField :: Char -> Field
 charToField 'X' = Wall
