@@ -25,6 +25,12 @@ data GhostState = Normal | Run | Dead
 type Grid = [Square]
 type Square = (Point, Field)
 data Field = Empty | Pellet | Power | Cherry | Wall 
+instance Show Field where
+  show Empty = "."
+  show Pellet ="P"
+  show Power = "S"
+  show Cherry ="C"
+  show Wall =  "X"
 data Fruit = Banana | Apple | BlueBerry | Grape
 data Score = Sc {currScore :: Int, highScore :: Int}
 
