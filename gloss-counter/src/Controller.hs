@@ -65,6 +65,8 @@ collision = undefined
 regulateState :: GameState -> GameState
 regulateState = undefined
 
+
+-- | Spawning randomly a cherry at a random spot.
 spawnCherry :: GameState -> GameState
 spawnCherry gstate | randomNumber == 1 = gstate {grid = cherryInserter newGen $ grid gstate, rng = newGen }
                    | otherwise = gstate{rng = newGen}
@@ -79,8 +81,7 @@ cherryInserter gen grid_ | empties /= [] = replaceAt' ( findSq randomNumber Cher
     empties = filter isEmpty grid_
     isEmpty ((_, _), field) = field == Empty
 
-findSq :: Int -> Field -> [Square] -> Square
-findSq _ _ [] = ((0,0),Empty)-- ???
+findSq :: Int -> Field -> [Square] -> Square --No need for base case as it has been made sure that the int is within the range of spots.
 findSq 0 f ((x,_):xs) = (x,f)
 findSq i f (x:xs) = findSq (i - 1) f xs
 
