@@ -1,6 +1,6 @@
 module Model where
 import Graphics.Gloss (loadBMP, Picture, Point, yellow)
-import System.Random (StdGen, mkStdGen, random, randomR)
+import System.Random (StdGen, mkStdGen, random, randomR, newStdGen)
 
 data GameState = GameState {
                    grid :: Grid
@@ -18,12 +18,13 @@ data Pacman = Pac {pacPos :: Point, pacDir:: Direction, pacDesDir:: Direction, p
 data Direction = N | E | S | W | X
 data Ghost = Gho {ghostPos :: Point, ghostDir:: Direction, ghostType :: GhostType, ghostState :: GhostState}
 
-data GhostType = Blinky | Pinky | Inky | Clyde
-data GhostState = Normal | Run | Dead
+data GhostType = Blinky | Pinky | Inky | Clyde deriving Eq
+data GhostState = Normal | Run | Dead deriving Eq
 --The grid will be represented by a list of type Points with their corresponding fields
 type Grid = [Square]
 type Square = (Point, Field)
-data Field = Empty | Pellet | Power | Cherry | Wall 
+data Field = Empty | Pellet | Power | Cherry | Wall deriving Eq
+
 instance Show Field where
   show Empty = "."
   show Pellet ="P"
@@ -39,14 +40,14 @@ initialState = do
   
   stringforgrid <- readFile "./Txtfiles/PacmanGrid1.txt"
   spritesPure <- loadSprites
-
+  generator <- newStdGen
   return (GameState{
     grid = stringToGrid stringforgrid,
     pacman = (Pac { pacPos = (0,0), pacDir = N, pacDesDir = E, pacLives = 3}),
     ghosts = [(Gho {ghostPos = (0,0), ghostDir = N, ghostType = Blinky, ghostState = Normal})],
     score = (Sc {currScore = 0, highScore = 200}),
     state = Paused,
-    rng = mkStdGen 69,
+    rng = generator,
     elapsedTime = 0,
     sprites = spritesPure
   })    
