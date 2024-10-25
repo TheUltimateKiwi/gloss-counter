@@ -15,7 +15,7 @@ step secs gstate = do
 
 -- | Update the movement for the game state
 movement :: GameState -> GameState
-movement gstate@GameState{ghosts = _ghosts} = 
+movement gstate = 
          gstate { pacman = pacMovement' $ pacman gstate, ghosts = ghostMovement $ ghosts gstate}
             
 pacMovement' :: Pacman -> Pacman  -- | Pacman movement for each step
@@ -32,9 +32,9 @@ goToDirection (x, y) W = (x - 1, y    )
 goToDirection (x, y) X = (x    , y    )
 
 validDirection :: Point -> Direction -> Bool
-validDirection pos dir = True 
+validDirection pos dir = True -- implementation of not going through walls.
 
--- | Ghost movement for each step
+  -- | GHOST movement for each step
 ghostMovement :: [Ghost] -> [Ghost]
 ghostMovement = map singularGhostMovement 
 
@@ -45,17 +45,17 @@ singularGhostMovement ghost_@(Gho {ghostPos = ghopos, ghostDir = ghodir})
   | otherwise                = ghost_ {ghostPos = goToDirection ghopos ghodir}
 
 isAtCrossRoad :: Point -> Bool
-isAtCrossRoad point = undefined                               -- implement checking if the ghost is at a crossroad
+isAtCrossRoad point = undefined-- implement checking if the ghost is at a crossroad
 
 ghostDirectionDecider :: Ghost -> Direction
 ghostDirectionDecider g = case ghostState g of 
-                                Dead ->             undefined -- implement the different algorithms
-                                Run ->              undefined
-                                Normal -> case ghostType g of 
-                                         Blinky ->  undefined
-                                         Pinky ->   undefined
-                                         Inky ->    undefined
-                                         Clyde ->   undefined 
+  Dead ->            undefined -- implement the different algorithms
+  Run ->             undefined
+  Normal -> case ghostType g of 
+          Blinky ->  undefined
+          Pinky ->   undefined
+          Inky ->    undefined
+          Clyde ->   undefined 
 
 
 
@@ -69,7 +69,8 @@ regulateState :: GameState -> GameState
 regulateState = undefined
 
 spawnCherry :: GameState -> GameState
-spawnCherry = undefined
+spawnCherry gstate = undefined 
+  where generator = rng gstate
 
 
 
