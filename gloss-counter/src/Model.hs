@@ -39,17 +39,11 @@ data Score = Sc {currScore :: Int, highScore :: Int}
 initialState :: IO GameState 
 initialState = do 
   
+  stringforgrid <- readFile "./Txtfiles/PacmanGrid1.txt"
   spritesPure <- loadSprites
 
   return (GameState{
-    grid = [
-    ((0, 0), Wall),   ((0, 1), Wall),   ((0, 2), Wall),   ((0, 3), Wall),   ((0, 4), Wall),   ((0, 5), Wall),   ((0, 6), Wall),
-    ((1, 0), Wall),   ((1, 1), Pellet), ((1, 2), Empty),  ((1, 3), Empty),  ((1, 4), Pellet), ((1, 5), Cherry), ((1, 6), Wall),
-    ((2, 0), Wall),   ((2, 1), Empty),  ((2, 2), Power),  ((2, 3), Empty),  ((2, 4), Empty),  ((2, 5), Pellet), ((2, 6), Wall),
-    ((3, 0), Wall),   ((3, 1), Empty),  ((3, 2), Empty),  ((3, 3), Empty),  ((3, 4), Pellet), ((3, 5), Empty),  ((3, 6), Wall),
-    ((4, 0), Wall),   ((4, 1), Pellet), ((4, 2), Empty),  ((4, 3), Cherry), ((4, 4), Power),  ((4, 5), Empty),  ((4, 6), Wall),
-    ((5, 0), Wall),   ((5, 1), Wall),   ((5, 2), Wall),   ((5, 3), Wall),   ((5, 4), Wall),   ((5, 5), Wall),   ((5, 6), Wall)
-    ],
+    grid = stringToGrid stringforgrid,
     pacman = (Pac { pacPos = (0,0), pacDir = N, pacDesDir = E, pacLives = 3}),
     ghosts = [(Gho {ghostPos = (0,0), ghostDir = N, ghostType = Blinky, ghostState = Normal})],
     score = (Sc {currScore = 0, highScore = 200}),
@@ -87,3 +81,23 @@ giveBitMap "blue" = loadBMP "./Pictures/blue_ghost_tile.bmp"
 giveBitMap "yellow" = loadBMP "./Pictures/yellow_ghost_tile.bmp"
 giveBitMap "pink" = loadBMP "./Pictures/pink_ghost_tile.bmp"
   
+stringToGrid :: String -> [Square]
+stringToGrid str = concat _indexfieldlsit
+ where
+    _indexfieldlsit = map squareTransformer sindexfieldlist
+    sindexfieldlist = zip [0..] findexfieldlist
+    findexfieldlist = map (zip [0..]) fieldlist
+    fieldlist = map (map charToField) linestr
+    linestr = lines str
+
+squareTransformer:: (Float,[(Float, Field)]) -> [Square]
+squareTransformer (y,[]) = []
+squareTransformer (y,(x,f):xs) = ((x,y),f) : squareTransformer (y,xs)
+
+charToField :: Char -> Field
+charToField 'X' = Wall
+charToField 'E' = Empty
+charToField '.' = Pellet
+charToField 'S' = Power
+charToField 'C' = Cherry
+charToField c = Wall

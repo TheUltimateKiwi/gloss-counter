@@ -15,7 +15,7 @@ main =
         playIO (InWindow "Counter" (340, 340) (0, 0)) -- Or FullScreen
               black            -- Background color
               10               -- Frames per second
-              startState     -- Initial state
+              startState       -- Initial state
               view             -- View function
               input            -- Event function
               step             -- Step function
