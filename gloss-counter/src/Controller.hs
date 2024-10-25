@@ -17,16 +17,31 @@ step secs gstate
 
 -- | Update the movement for the game state
 movement :: GameState -> GameState
-movement gstate@GameState{pacman = _pacman} = 
-         gstate{pacman = (Pac {pacPos = newPacPos, pacDir = newPacDir})}
+movement gstate@GameState{pacman = _pacman, ghosts = _ghosts} = 
+         gstate{pacman = (Pac {pacPos = newPacPos, pacDir = newPacDir}), ghosts = ghostMovement _ghosts}
           where
             (newPacDir, newPacPos) = pacMovement _pacman
             
-
+-- | Pacman movement for each step
 pacMovement :: Pacman -> (Direction, Point)
-pacMovement pacman@(Pac {pacPos = pacPos@(x,y),pacDir = currDir, pacDesDir = desDir}) = undefined -- Check if it is possible for pacman to go to the desDir if not do the currDir,
-                                               -- Check if do currDir if it is possible for pacman if not do direction X.
-                                               -- with the (new) direction increment the pacPos and return the new direction and point.
+pacMovement pacman@(Pac {pacPos = pacPos@(x,y),pacDir = currDir, pacDesDir = desDir})  
+  | validDirection pacPos desDir  = (desDir, goToDirection pacPos desDir)
+  | validDirection pacPos currDir = (currDir, goToDirection pacPos desDir)
+  | otherwise                     = (X, pacPos)
+
+goToDirection :: Point -> Direction -> Point
+goToDirection (x, y) N = (x    , y - 1)
+goToDirection (x, y) E = (x + 1, y    )
+goToDirection (x, y) S = (x    , y + 1)
+goToDirection (x, y) W = (x - 1, y    )
+goToDirection (x, y) X = (x    , y    )
+
+validDirection :: Point -> Direction -> Bool
+validDirection pos dir = True
+
+-- | Ghost movement for each step
+ghostMovement :: [Ghost] -> [Ghost]
+ghostMovement ghost = ghost -- not yet implemented
 
 -- | Update the collision for the game state
 collision ::GameState -> GameState
