@@ -1,5 +1,5 @@
 module Model where
-import Graphics.Gloss (loadBMP, Picture, Point)
+import Graphics.Gloss (loadBMP, Picture, Point, yellow)
 import System.Random (StdGen, mkStdGen, random, randomR)
 
 nO_SECS_BETWEEN_CYCLES :: Float
@@ -13,6 +13,7 @@ data GameState = GameState {
                  , state :: State
                  , rng :: StdGen
                  , elapsedTime :: Float
+                 , sprites :: [Picture]
                  }
 
 data State = Starting | Paused | Playing | Ended
@@ -36,7 +37,11 @@ data Score = Sc {currScore :: Int, highScore :: Int}
 
 
 initialState :: IO GameState 
-initialState = do return (GameState{
+initialState = do 
+  
+  spritesPure <- loadSprites
+
+  return (GameState{
     grid = [
     ((0, 0), Wall),   ((0, 1), Wall),   ((0, 2), Wall),   ((0, 3), Wall),   ((0, 4), Wall),   ((0, 5), Wall),   ((0, 6), Wall),
     ((1, 0), Wall),   ((1, 1), Pellet), ((1, 2), Empty),  ((1, 3), Empty),  ((1, 4), Pellet), ((1, 5), Cherry), ((1, 6), Wall),
@@ -50,7 +55,35 @@ initialState = do return (GameState{
     score = (Sc {currScore = 0, highScore = 200}),
     state = Paused,
     rng = mkStdGen 69,
-    elapsedTime = 0
-  })
+    elapsedTime = 0,
+    sprites = spritesPure
+  })    
+    
+loadSprites :: IO [Picture]
+loadSprites = do 
+    pacman <- giveBitMap "Pac-Man"
+    pellet <- giveBitMap "pellet"
+    empty <- giveBitMap "empty"
+    cherry <- giveBitMap "cherry"
+    power <- giveBitMap "power"
+    wall <- giveBitMap "wall"
+    red_ <- giveBitMap "red"
+    blue_ <- giveBitMap "blue"
+    pink_ <- giveBitMap "pink"
+    yellow_ <- giveBitMap "yellow"
+
+    return [pacman, pellet, empty, cherry, power, wall, red_, blue_, pink_, yellow_]
   
+
+giveBitMap :: String -> IO Picture
+giveBitMap "Pac-Man" = loadBMP "./Pictures/Pacman-Basic.bmp"
+giveBitMap "pellet" = loadBMP "./Pictures/pellet_tile.bmp"
+giveBitMap "empty"     = loadBMP "./Pictures/empty_tile.bmp"
+giveBitMap "cherry" = loadBMP "./Pictures/cherry_tile.bmp"
+giveBitMap "power" = loadBMP "./Pictures/powerpellet_tile.bmp"
+giveBitMap "wall"     = loadBMP "./Pictures/wall_tile.bmp"
+giveBitMap "red" = loadBMP "./Pictures/red_ghost_tile.bmp"
+giveBitMap "blue" = loadBMP "./Pictures/blue_ghost_tile.bmp"
+giveBitMap "yellow" = loadBMP "./Pictures/yellow_ghost_tile.bmp"
+giveBitMap "pink" = loadBMP "./Pictures/pink_ghost_tile.bmp"
   
