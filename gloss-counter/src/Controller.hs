@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 module Controller where
 
 import Model
@@ -8,43 +9,59 @@ import System.Random
 
 -- | Handle one iteration of the game
 step :: Float -> GameState -> IO GameState
-step secs gstate
-  | elapsedTime gstate + secs > nO_SECS_BETWEEN_CYCLES
-  = do return $ spawnCherry $ regulateState $ collision $ movement gstate
-  | otherwise
-  = -- Just update the elapsed time
-    return $ gstate { elapsedTime = elapsedTime gstate + secs }
+step secs gstate = do
+  return $ movement gstate
+
 
 -- | Update the movement for the game state
 movement :: GameState -> GameState
-movement gstate@GameState{pacman = _pacman, ghosts = _ghosts} = 
-         gstate{pacman = (Pac {pacPos = newPacPos, pacDir = newPacDir}), ghosts = ghostMovement _ghosts}
-          where
-            (newPacDir, newPacPos) = pacMovement _pacman
+movement gstate@GameState{ghosts = _ghosts} = 
+         gstate { pacman = pacMovement' $ pacman gstate, ghosts = ghostMovement $ ghosts gstate}
             
--- | Pacman movement for each step
-pacMovement :: Pacman -> (Direction, Point)
-pacMovement pacman@(Pac {pacPos = pacPos@(x,y),pacDir = currDir, pacDesDir = desDir})  
-  | validDirection pacPos desDir  = (desDir, goToDirection pacPos desDir)
-  | validDirection pacPos currDir = (currDir, goToDirection pacPos desDir)
-  | otherwise                     = (X, pacPos)
+pacMovement' :: Pacman -> Pacman  -- | Pacman movement for each step
+pacMovement' pacman_@(Pac {pacPos = pacPos, pacDir = currDir, pacDesDir = desDir})  
+  | validDirection pacPos desDir  = pacman_ { pacPos = goToDirection pacPos desDir, pacDir = desDir}
+  | validDirection pacPos currDir = pacman_ { pacPos = goToDirection pacPos currDir}
+  | otherwise                     = pacman_ { pacDir = X }
 
 goToDirection :: Point -> Direction -> Point
-goToDirection (x, y) N = (x    , y - 1)
+goToDirection (x, y) N = (x    , y + 1)
 goToDirection (x, y) E = (x + 1, y    )
-goToDirection (x, y) S = (x    , y + 1)
+goToDirection (x, y) S = (x    , y - 1)
 goToDirection (x, y) W = (x - 1, y    )
 goToDirection (x, y) X = (x    , y    )
 
 validDirection :: Point -> Direction -> Bool
-validDirection pos dir = True
+validDirection pos dir = True 
 
 -- | Ghost movement for each step
 ghostMovement :: [Ghost] -> [Ghost]
-ghostMovement ghost = ghost -- not yet implemented
+ghostMovement = map singularGhostMovement 
+
+singularGhostMovement :: Ghost -> Ghost
+singularGhostMovement ghost_@(Gho {ghostPos = ghopos, ghostDir = ghodir})
+  | isAtCrossRoad ghopos = let decidedDir = ghostDirectionDecider ghost_
+                            in ghost_ {ghostPos = goToDirection ghopos decidedDir, ghostDir = decidedDir}
+  | otherwise                = ghost_ {ghostPos = goToDirection ghopos ghodir}
+
+isAtCrossRoad :: Point -> Bool
+isAtCrossRoad point = undefined                               -- implement checking if the ghost is at a crossroad
+
+ghostDirectionDecider :: Ghost -> Direction
+ghostDirectionDecider g = case ghostState g of 
+                                Dead ->             undefined -- implement the different algorithms
+                                Run ->              undefined
+                                Normal -> case ghostType g of 
+                                         Blinky ->  undefined
+                                         Pinky ->   undefined
+                                         Inky ->    undefined
+                                         Clyde ->   undefined 
+
+
+
 
 -- | Update the collision for the game state
-collision ::GameState -> GameState
+collision :: GameState -> GameState
 collision = undefined
 
 -- | Regulate the state for the game state
@@ -55,15 +72,17 @@ spawnCherry :: GameState -> GameState
 spawnCherry = undefined
 
 
+
+
 -- | Handle user input
 input :: Event -> GameState -> IO GameState
 input e gstate = return (inputKey e gstate)
 
 inputKey :: Event -> GameState -> GameState
 inputKey (EventKey (SpecialKey c) _ _ _) gstate@GameState{pacman = (Pac {pacPos = (x,y),pacDir = a, pacDesDir = b, pacLives = d}), elapsedTime = qq} 
-  | c == KeyLeft = gstate { pacman = (Pac {pacDesDir = W})} 
-  | c == KeyRight = gstate { pacman = (Pac {pacDesDir = E})} 
-  | c == KeyUp = gstate  { pacman = (Pac {pacDesDir = N})} 
-  | c == KeyDown = gstate { pacman = (Pac {pacDesDir = S})} 
+  | c == KeyLeft  = gstate { pacman = (Pac {pacPos = (x,y),pacDir =a, pacDesDir = W, pacLives = d})}
+  | c == KeyRight = gstate { pacman = (Pac {pacPos = (x,y),pacDir =a, pacDesDir = E, pacLives = d})}
+  | c == KeyUp    = gstate { pacman = (Pac {pacPos = (x,y),pacDir =a, pacDesDir = N, pacLives = d})}
+  | c == KeyDown  = gstate { pacman = (Pac {pacPos = (x,y),pacDir =a, pacDesDir = S, pacLives = d})} 
 inputKey _ gstate = gstate -- Otherwise keep the same.
 

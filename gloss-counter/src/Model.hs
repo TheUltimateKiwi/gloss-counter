@@ -2,9 +2,6 @@ module Model where
 import Graphics.Gloss (loadBMP, Picture, Point, yellow)
 import System.Random (StdGen, mkStdGen, random, randomR)
 
-nO_SECS_BETWEEN_CYCLES :: Float
-nO_SECS_BETWEEN_CYCLES = 30
-
 data GameState = GameState {
                    grid :: Grid
                  , pacman :: Pacman
@@ -20,6 +17,7 @@ data State = Starting | Paused | Playing | Ended
 data Pacman = Pac {pacPos :: Point, pacDir:: Direction, pacDesDir:: Direction, pacLives :: Int}
 data Direction = N | E | S | W | X
 data Ghost = Gho {ghostPos :: Point, ghostDir:: Direction, ghostType :: GhostType, ghostState :: GhostState}
+
 data GhostType = Blinky | Pinky | Inky | Clyde
 data GhostState = Normal | Run | Dead
 --The grid will be represented by a list of type Points with their corresponding fields
