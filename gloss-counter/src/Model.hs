@@ -46,7 +46,7 @@ initialState = do
     pacman = (Pac { pacPos = (0,0), pacDir = N, pacDesDir = E, pacLives = 3}),
     ghosts = [(Gho {ghostPos = (0,0), ghostDir = N, ghostType = Blinky, ghostState = Normal})],
     score = (Sc {currScore = 0, highScore = 200}),
-    state = Paused,
+    state = Playing,
     rng = generator,
     elapsedTime = 0,
     sprites = spritesPure

@@ -87,8 +87,8 @@ findSq i f (x:xs) = findSq (i - 1) f xs
 
 replaceAt' :: Square -> [Square] -> [Square]
 replaceAt' _ [] = []
-replaceAt' sq@((x,y),f) (ff@((x',y'),_):xs) | x == x' && y == y' = sq : xs
-                                            | otherwise = ff : replaceAt' sq xs
+replaceAt' sq@(x,f) (ff@(x',_):xs) | x == x' = sq : xs
+                                   | otherwise = ff : replaceAt' sq xs
 
 
 -- | Handle user input
@@ -96,10 +96,11 @@ input :: Event -> GameState -> IO GameState
 input e gstate = return (inputKey e gstate)
 
 inputKey :: Event -> GameState -> GameState
-inputKey (EventKey (SpecialKey c) _ _ _) gstate@GameState{pacman = (Pac {pacPos = (x,y),pacDir = a, pacDesDir = b, pacLives = d}), elapsedTime = qq}
-  | c == KeyLeft  = gstate { pacman = (Pac {pacPos = (x,y),pacDir =a, pacDesDir = W, pacLives = d})}
-  | c == KeyRight = gstate { pacman = (Pac {pacPos = (x,y),pacDir =a, pacDesDir = E, pacLives = d})}
-  | c == KeyUp    = gstate { pacman = (Pac {pacPos = (x,y),pacDir =a, pacDesDir = N, pacLives = d})}
-  | c == KeyDown  = gstate { pacman = (Pac {pacPos = (x,y),pacDir =a, pacDesDir = S, pacLives = d})}
+inputKey (EventKey (SpecialKey c) _ _ _) gstate@GameState{pacman = pacman_}
+  -- | c == KeySpace = gstate { state = Paused}
+  | c == KeyLeft  = gstate { pacman = pacman_ {pacDesDir = W}}
+  | c == KeyRight = gstate { pacman = pacman_ {pacDesDir = E}}
+  | c == KeyUp    = gstate { pacman = pacman_ {pacDesDir = N}}
+  | c == KeyDown  = gstate { pacman = pacman_ {pacDesDir = S}}
 inputKey _ gstate = gstate -- Otherwise keep the same.
 
