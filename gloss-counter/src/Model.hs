@@ -80,7 +80,8 @@ followUpState int_ gstate = do
   }) 
 
 resetLvl :: GameState -> GameState
-resetLvl gstate = (gstate {
+resetLvl gstate | pacLives (pacman gstate) <= 0 = gstate {state = Ended} -- Check if you are out of lives.
+                | otherwise = (gstate {
       pacman = (pacman gstate) {pacPos = (10*20,-16*20), pacDir = X, pacDesDir = X, pacLives = pacLives (pacman gstate) - 1}, --pacman lives stay consistant
       ghosts = [(Gho {ghostPos = (8*20,-10*20), ghostDir = X, ghostType = Blinky, ghostState = Normal}),
                 (Gho {ghostPos = (9*20,-10*20), ghostDir = X, ghostType = Inky, ghostState = Normal}),
@@ -103,7 +104,6 @@ loadSprites = do
     blue_ <- giveBitMap "blue"
     pink_ <- giveBitMap "pink"
     yellow_ <- giveBitMap "yellow"
-
     return [pacman, pellet, empty, cherry, power, wall, red_, blue_, pink_, yellow_]
   
 

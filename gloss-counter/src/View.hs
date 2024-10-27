@@ -9,7 +9,7 @@ view gs = return (viewPure gs)
 viewPure :: GameState -> Picture
 viewPure gameState@GameState {
     grid = grid_ ,
-    pacman = Pac {pacPos = (c,d)},
+    pacman = Pac {pacPos = (c,d), pacLives = lives_},
     score = Sc {currScore = score_,
     highScore = highScore_},
     ghosts = ghosts_,
@@ -23,6 +23,7 @@ viewPure gameState@GameState {
         ghostsPicture = Pictures $ map (\gh -> ghostToPic gh [red_,blue_,pink_,yellow_]) ghosts_
         scoretxt     = Pictures [translate (-100) 240 $ scale 0.3 0.3 $ color white $ Text ("Score  " ++ show score_), highscoretxt]
         highscoretxt = translate (-80) 200 $ scale 0.15 0.15 $ color white $ Text ("HighScore  " ++ show highScore_)
+        livestxt = translate (-20) (-290) $ scale 0.1 0.1 $ color white $ Text ("Lives: " ++ show lives_)
 
         statetxt| state_ == Playing = Pictures []
                 | state_ == Paused = Pictures [transparentGreyOverlay, translate (-160) 0 $ scale 0.65 0.65 $ text "PAUSED" ]
@@ -30,7 +31,7 @@ viewPure gameState@GameState {
                 | state_ == Ended = Pictures [transparentGreyOverlay, translate (-200) 0 $ scale 0.2 0.2 $ text "You Lost Press Enter To Restart" ]
             where transparentGreyOverlay = scale 5 5 $ color (makeColor 0.8 0.8 0.8 0.8) $ polygon $ rectanglePath 340 340
 
-        fullPicture  = Pictures [gridPicture, ghostsPicture, pacPicture, scoretxt, statetxt]
+        fullPicture  = Pictures [gridPicture, ghostsPicture, pacPicture, scoretxt, statetxt, livestxt]
 
     in fullPicture
 

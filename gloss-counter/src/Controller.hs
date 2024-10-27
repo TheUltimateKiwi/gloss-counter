@@ -9,7 +9,7 @@ import Control.Arrow (Arrow(second))
 -- | Handle one iteration of the game
 step :: Float -> GameState -> IO GameState
 step secs gstate | state gstate == Playing = return $ collision $ movement $ spawnCherry gstate
-                 | otherwise = return $ regulateState gstate { elapsedTime = elapsedTime gstate + secs }  --If gameplay is paused or Ended no need to do movement or other things
+                 | otherwise = regulateState gstate { elapsedTime = elapsedTime gstate + secs }  --If gameplay is paused or Ended no need to do movement or other things
 
 -- | Update the movement for the game state
 movement :: GameState -> GameState
@@ -137,9 +137,13 @@ checkGhostCollision (xP, yP) ghost@(Gho{ghostPos = (xG,yG)})
       pitty = 4
 
 -- | Regulate the state for the game state
-regulateState :: GameState -> GameState
-regulateState gstate | state gstate == Starting && elapsedTime gstate >= timeToStart = gstate { state = Playing }
-                     | otherwise = gstate
+regulateState :: GameState -> IO GameState
+regulateState gstate | state gstate == Starting && elapsedTime gstate >= timeToStart = return gstate { state = Playing }
+                     | state gstate == Ended && highScore (score gstate) > currScore (score gstate) = do 
+                                                                                                        putStr "writing highscore"
+                                                                                                        writeFile "./Txtfiles/HighScore.txt" (show (currScore (score gstate))) 
+                                                                                                        return gstate 
+                     |otherwise = return gstate
   where timeToStart = 5
 
 
@@ -173,14 +177,17 @@ replaceAt' sq@(x,f) (ff@(x',_):xs) | x == x' = sq : xs
 -- | Handle user input
 input :: Event -> GameState -> IO GameState
 input e gstate | pausedOrEnded == Paused = return (inputUnPause e gstate)
-               | pausedOrEnded == Ended = inputNewGame e gstate
+               | pausedOrEnded == Ended = do 
+                                          
+                                            inputNewGame e gstate
+               | pausedOrEnded == Starting = return gstate
                | otherwise = return (inputKey e gstate) --Playing && Starting
   where pausedOrEnded = state gstate
 
 inputKey :: Event -> GameState -> GameState
 inputKey (EventKey (SpecialKey c) Down _ _) gstate@GameState{ pacman = pacman_ }
   | c == KeySpace = gstate { state = Paused }
-    | c == KeyEnter = gstate { state = Ended }
+  | c == KeyShiftL = gstate { state = Ended }
   | c == KeyLeft  = gstate { pacman = pacman_ {pacDesDir = W}}
   | c == KeyRight = gstate { pacman = pacman_ {pacDesDir = E}}
   | c == KeyUp    = gstate { pacman = pacman_ {pacDesDir = N}}
@@ -194,5 +201,5 @@ inputUnPause _ gstate = gstate -- Otherwise keep the same.
 
 inputNewGame :: Event -> GameState -> IO GameState
 inputNewGame (EventKey (SpecialKey c) Down _ _) gstate
-  | c == KeyEnter = followUpState 2 gstate  -- Restart the game !!Random or gstate Int to keep track
+  | c == KeyEnter && state gstate == Ended = initialState  -- Restart the game !!Random or gstate Int to keep track
 inputNewGame _ gstate = return gstate -- Otherwise keep the same.
