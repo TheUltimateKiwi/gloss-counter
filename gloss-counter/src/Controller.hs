@@ -1,21 +1,18 @@
 {-# LANGUAGE BlockArguments #-}
 module Controller where
-
 import Model
-
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Game
 import System.Random
 
 -- | Handle one iteration of the game
 step :: Float -> GameState -> IO GameState
-step secs gstate = return $ spawnCherry $ movement gstate
-
+step secs gstate | state gstate == Playing = return $ spawnCherry $ movement gstate
+                 | otherwise = return $ regulateState gstate { elapsedTime = elapsedTime gstate + secs }  --If gameplay is paused or Ended no need to do movement or other things
 
 -- | Update the movement for the game state
 movement :: GameState -> GameState
-movement gstate =
-         gstate { pacman = pacMovement' $ pacman gstate}--, ghosts = ghostMovement $ ghosts gstate}
+movement gstate = gstate { pacman = pacMovement' $ pacman gstate}--, ghosts = ghostMovement $ ghosts gstate}
 
 pacMovement' :: Pacman -> Pacman  -- | Pacman movement for each step
 pacMovement' pacman_@(Pac {pacPos = pacPos, pacDir = currDir, pacDesDir = desDir})
@@ -44,7 +41,7 @@ singularGhostMovement ghost_@(Gho {ghostPos = ghopos, ghostDir = ghodir})
   | otherwise                = ghost_ {ghostPos = goToDirection ghopos ghodir}
 
 isAtCrossRoad :: Point -> Bool
-isAtCrossRoad point = undefined-- implement checking if the ghost is at a crossroad
+isAtCrossRoad point = undefined -- implement checking if the ghost is at a crossroad
 
 ghostDirectionDecider :: Ghost -> Direction
 ghostDirectionDecider g | gstate == Run   = undefined --implement diff move algorithms
@@ -63,8 +60,9 @@ collision = undefined
 
 -- | Regulate the state for the game state
 regulateState :: GameState -> GameState
-regulateState = undefined
-
+regulateState gstate | state gstate == Starting && elapsedTime gstate >= timeToStart = gstate { state = Playing }
+                     | otherwise = gstate
+  where timeToStart = 3
 
 -- | Spawning randomly a cherry at a random spot.
 spawnCherry :: GameState -> GameState
@@ -93,14 +91,26 @@ replaceAt' sq@(x,f) (ff@(x',_):xs) | x == x' = sq : xs
 
 -- | Handle user input
 input :: Event -> GameState -> IO GameState
-input e gstate = return (inputKey e gstate)
+input e gstate | pausedOrEnded == Paused = return (inputUnPause e gstate)
+               | pausedOrEnded == Ended = return (inputNewGame e gstate)
+               | otherwise = return (inputKey e gstate) --Playing && Starting
+  where pausedOrEnded = state gstate
 
 inputKey :: Event -> GameState -> GameState
-inputKey (EventKey (SpecialKey c) _ _ _) gstate@GameState{pacman = pacman_}
-  -- | c == KeySpace = gstate { state = Paused}
+inputKey (EventKey (SpecialKey c) Down _ _) gstate@GameState{ pacman = pacman_ }
+  | c == KeySpace = gstate { state = Paused }
   | c == KeyLeft  = gstate { pacman = pacman_ {pacDesDir = W}}
   | c == KeyRight = gstate { pacman = pacman_ {pacDesDir = E}}
   | c == KeyUp    = gstate { pacman = pacman_ {pacDesDir = N}}
   | c == KeyDown  = gstate { pacman = pacman_ {pacDesDir = S}}
 inputKey _ gstate = gstate -- Otherwise keep the same.
 
+inputUnPause :: Event -> GameState -> GameState
+inputUnPause (EventKey (SpecialKey c) Down _ _) gstate
+  | c == KeySpace = gstate { state = Playing }   -- Unpause the game
+inputUnPause _ gstate = gstate -- Otherwise keep the same.
+
+inputNewGame :: Event -> GameState -> GameState
+inputNewGame (EventKey (SpecialKey c) Down _ _) gstate
+  | c == KeyEnter = gstate { state = Starting }  -- Restart the game
+inputNewGame _ gstate = gstate -- Otherwise keep the same.

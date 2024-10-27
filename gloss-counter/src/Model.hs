@@ -13,7 +13,7 @@ data GameState = GameState {
                  , sprites :: [Picture]
                  }
 
-data State = Starting | Paused | Playing | Ended
+data State = Starting | Paused | Playing | Ended deriving Eq 
 data Pacman = Pac {pacPos :: Point, pacDir:: Direction, pacDesDir:: Direction, pacLives :: Int}
 data Direction = N | E | S | W | X
 data Ghost = Gho {ghostPos :: Point, ghostDir:: Direction, ghostType :: GhostType, ghostState :: GhostState}
@@ -46,7 +46,7 @@ initialState = do
     pacman = (Pac { pacPos = (0,0), pacDir = N, pacDesDir = E, pacLives = 3}),
     ghosts = [(Gho {ghostPos = (0,0), ghostDir = N, ghostType = Blinky, ghostState = Normal})],
     score = (Sc {currScore = 0, highScore = 200}),
-    state = Playing,
+    state = Starting,
     rng = generator,
     elapsedTime = 0,
     sprites = spritesPure
