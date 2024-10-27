@@ -10,6 +10,9 @@ step :: Float -> GameState -> IO GameState
 step secs gstate | state gstate == Playing = return $ spawnCherry $ fieldCollision $ movement gstate
                  | otherwise = return $ regulateState gstate { elapsedTime = elapsedTime gstate + secs }  --If gameplay is paused or Ended no need to do movement or other things
 
+
+
+
 -- | Update the movement for the game state
 movement :: GameState -> GameState
 movement gstate = gstate { pacman = pacMovement' $ pacman gstate}--, ghosts = ghostMovement $ ghosts gstate}
@@ -56,6 +59,9 @@ ghostDirectionDecider g | gstate == Run   = undefined --implement diff move algo
   where
     gstate = ghostState g
     gtype = ghostType g
+
+
+
 
 -- | Update the collision for the game state
 collision :: GameState -> GameState
@@ -122,14 +128,17 @@ checkGhostCollision (xP, yP) ghost@(Gho{ghostPos = (xG,yG)}) | (xP > xG && xP - 
 regulateState :: GameState -> GameState
 regulateState gstate | state gstate == Starting && elapsedTime gstate >= timeToStart = gstate { state = Playing }
                      | otherwise = gstate
-  where timeToStart = 3
+  where timeToStart = 5
+
+
 
 -- | Spawning randomly a cherry at a random spot.
 spawnCherry :: GameState -> GameState
 spawnCherry gstate | randomNumber == 1 = gstate {grid = cherryInserter newGen $ grid gstate, rng = newGen }
                    | otherwise = gstate{rng = newGen}
   where generator = rng gstate
-        (randomNumber, newGen) = randomR (1, 75) generator  :: (Int, StdGen)
+        (randomNumber, newGen) = randomR (1, cherrySpawnChance) generator  :: (Int, StdGen)
+        cherrySpawnChance = 250 --1/chance so the higher this number the lower the chance
 
 cherryInserter :: StdGen -> Grid -> Grid
 cherryInserter gen grid_ | empties /= [] = replaceAt' ( findSq randomNumber Cherry empties ) grid_
@@ -152,13 +161,14 @@ replaceAt' sq@(x,f) (ff@(x',_):xs) | x == x' = sq : xs
 -- | Handle user input
 input :: Event -> GameState -> IO GameState
 input e gstate | pausedOrEnded == Paused = return (inputUnPause e gstate)
-               | pausedOrEnded == Ended = return (inputNewGame e gstate)
+               | pausedOrEnded == Ended = inputNewGame e gstate
                | otherwise = return (inputKey e gstate) --Playing && Starting
   where pausedOrEnded = state gstate
 
 inputKey :: Event -> GameState -> GameState
 inputKey (EventKey (SpecialKey c) Down _ _) gstate@GameState{ pacman = pacman_ }
   | c == KeySpace = gstate { state = Paused }
+    | c == KeyEnter = gstate { state = Ended }
   | c == KeyLeft  = gstate { pacman = pacman_ {pacDesDir = W}}
   | c == KeyRight = gstate { pacman = pacman_ {pacDesDir = E}}
   | c == KeyUp    = gstate { pacman = pacman_ {pacDesDir = N}}
@@ -170,7 +180,7 @@ inputUnPause (EventKey (SpecialKey c) Down _ _) gstate
   | c == KeySpace = gstate { state = Playing }   -- Unpause the game
 inputUnPause _ gstate = gstate -- Otherwise keep the same.
 
-inputNewGame :: Event -> GameState -> GameState
+inputNewGame :: Event -> GameState -> IO GameState
 inputNewGame (EventKey (SpecialKey c) Down _ _) gstate
-  | c == KeyEnter = gstate { state = Starting }  -- Restart the game
-inputNewGame _ gstate = gstate -- Otherwise keep the same.
+  | c == KeyEnter = followUpState 2 gstate  -- Restart the game !!Random or gstate Int to keep track
+inputNewGame _ gstate = return gstate -- Otherwise keep the same.
