@@ -7,7 +7,7 @@ import System.Random
 
 -- | Handle one iteration of the game
 step :: Float -> GameState -> IO GameState
-step secs gstate | state gstate == Playing = return $ spawnCherry $ movement gstate
+step secs gstate | state gstate == Playing = return $ spawnCherry $ fieldCollision $ movement gstate
                  | otherwise = return $ regulateState gstate { elapsedTime = elapsedTime gstate + secs }  --If gameplay is paused or Ended no need to do movement or other things
 
 -- | Update the movement for the game state
@@ -21,11 +21,14 @@ pacMovement' pacman_@(Pac {pacPos = pacPos, pacDir = currDir, pacDesDir = desDir
   | otherwise                     = pacman_ { pacDir = X }
 
 goToDirection :: Point -> Direction -> Point
-goToDirection (x, y) N = (x    , y + 1)
-goToDirection (x, y) E = (x + 1, y    )
-goToDirection (x, y) S = (x    , y - 1)
-goToDirection (x, y) W = (x - 1, y    )
-goToDirection (x, y) X = (x    , y    )
+goToDirection (x, y) dir | dir == N = (x        , y + speed)
+                         | dir == E = (x + speed, y        )
+                         | dir == S = (x        , y - speed)
+                         | dir == W = (x - speed, y        )
+                         | dir == X = (x        , y        )
+                            where
+                              speed = 2
+
 
 validDirection :: Point -> Direction -> Bool
 validDirection pos dir = True -- implementation of not going through walls.
@@ -56,7 +59,64 @@ ghostDirectionDecider g | gstate == Run   = undefined --implement diff move algo
 
 -- | Update the collision for the game state
 collision :: GameState -> GameState
-collision = undefined
+collision gstate = ghostCollisions $ fieldCollision gstate
+
+fieldCollision :: GameState -> GameState
+fieldCollision gstate_@(GameState {grid = grid_, pacman = pacman_@(Pac {pacPos = pacPos_}), ghosts = ghosts_,
+                        score = score_@(Sc {currScore = currScore_})}) 
+  = gstate_ { grid = newGrid, ghosts = updateGhostForPowerPellet power ghosts_, score = score_ {currScore = newScore}}
+    where 
+      (newGrid, newScore, power) = fieldCollisionHelper (gamePosToGridPos pacPos_) grid_ currScore_
+      
+updateGhostForPowerPellet :: Bool -> [Ghost] -> [Ghost]
+updateGhostForPowerPellet False ghosts = ghosts 
+updateGhostForPowerPellet True ghosts = map makeGhostRun ghosts
+
+makeGhostRun :: Ghost -> Ghost
+makeGhostRun ghost@(Gho {ghostState = ghostState_}) | ghostState_ == Normal = ghost{ ghostState = Run} 
+                                                    | otherwise             = ghost
+
+fieldCollisionHelper :: Point -> Grid -> Int -> (Grid, Int, Bool)
+fieldCollisionHelper pos grid@(square@(fieldPos, field): restGrid) oldScore | pos == fieldPos = (newSquare : restGrid, newScore, power)
+                                                                            | otherwise       = (square : recursionGrid, recursionScore, False)
+                                                                              where
+                                                                                (newSquare, newScore, power) = squarePacmanCollision square oldScore
+                                                                                (recursionGrid, recursionScore, False) = fieldCollisionHelper pos restGrid oldScore
+
+squarePacmanCollision :: Square -> Int -> (Square, Int, Bool)
+squarePacmanCollision square@(fieldPos, field) score | field == Pellet = ((fieldPos, Empty), score + 10, False)
+                                                     | field == Power  = ((fieldPos, Empty), score + 100, True)
+                                                     | field == Cherry = ((fieldPos, Empty), score + 500, False)
+                                                     | otherwise = (square, score, False)
+
+
+gamePosToGridPos :: Point -> Point
+gamePosToGridPos (0, 0) = (0                  , 0)
+gamePosToGridPos (x, 0) = (roundFloat (x / 20), 0)
+gamePosToGridPos (0, y) = (0                  , roundFloat (-y / 20))
+gamePosToGridPos (x, y) = (roundFloat (x / 20), roundFloat (-y / 20))
+
+roundFloat :: Float -> Float
+roundFloat x = fromIntegral $ round x
+
+ghostCollisions :: GameState -> GameState
+ghostCollisions gstate_@(GameState {pacman = pacman_@(Pac {pacPos = pacPos_, pacLives = pacLives_}), ghosts = ghosts_, state = state_}) = 
+  gstate_ {pacman = pacman_{pacLives = newLives}, ghosts = newGhosts, state = newState}
+    where 
+      newState  = undefined 
+      newGhosts = undefined
+      newLives  = undefined
+
+handleGhostCollison :: (Ghost, Bool) -> (Ghost, Bool)
+handleGhostCollison (ghost, False) = (ghost, False) 
+handleGhostCollison (ghost@(Gho{ghostState = Run}), True) = (ghost{ ghostState = Dead}, False)
+handleGhostCollison (ghost@(Gho{ghostState = Normal}), True) = (ghost, True)
+handleGhostCollison (ghost@(Gho{ghostState = Dead}), True) = (ghost, False)
+
+checkGhostCollision :: Point -> Ghost -> (Ghost, Bool)
+checkGhostCollision (xP, yP) ghost@(Gho{ghostPos = (xG,yG)}) | (xP > xG && xP - 20 > xG) || (xP < xG && xP + 20 < xG)
+                                                                || (yP > yG && yP - 20 > yG) || (yP < yG && yP + 20 < yG) = (ghost, False)
+                                                             | otherwise = (ghost, True)
 
 -- | Regulate the state for the game state
 regulateState :: GameState -> GameState

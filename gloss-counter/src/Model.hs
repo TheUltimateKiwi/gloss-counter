@@ -15,7 +15,7 @@ data GameState = GameState {
 
 data State = Starting | Paused | Playing | Ended deriving Eq 
 data Pacman = Pac {pacPos :: Point, pacDir:: Direction, pacDesDir:: Direction, pacLives :: Int}
-data Direction = N | E | S | W | X
+data Direction = N | E | S | W | X deriving Eq
 data Ghost = Gho {ghostPos :: Point, ghostDir:: Direction, ghostType :: GhostType, ghostState :: GhostState}
 
 data GhostType = Blinky | Pinky | Inky | Clyde deriving Eq
