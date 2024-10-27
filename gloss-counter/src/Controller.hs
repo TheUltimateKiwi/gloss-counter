@@ -4,14 +4,12 @@ import Model
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Game
 import System.Random
+import Control.Arrow (Arrow(second))
 
 -- | Handle one iteration of the game
 step :: Float -> GameState -> IO GameState
-step secs gstate | state gstate == Playing = return $ spawnCherry $ fieldCollision $ movement gstate
+step secs gstate | state gstate == Playing = return $ collision $ movement $ spawnCherry gstate
                  | otherwise = return $ regulateState gstate { elapsedTime = elapsedTime gstate + secs }  --If gameplay is paused or Ended no need to do movement or other things
-
-
-
 
 -- | Update the movement for the game state
 movement :: GameState -> GameState
@@ -31,7 +29,6 @@ goToDirection (x, y) dir | dir == N = (x        , y + speed)
                          | dir == X = (x        , y        )
                             where
                               speed = 2
-
 
 validDirection :: Point -> Direction -> Bool
 validDirection pos dir = True -- implementation of not going through walls.
@@ -60,69 +57,84 @@ ghostDirectionDecider g | gstate == Run   = undefined --implement diff move algo
     gstate = ghostState g
     gtype = ghostType g
 
-
-
-
 -- | Update the collision for the game state
 collision :: GameState -> GameState
 collision gstate = ghostCollisions $ fieldCollision gstate
 
+-- | Given a gamestate handle the collision for pacman with fields
 fieldCollision :: GameState -> GameState
 fieldCollision gstate_@(GameState {grid = grid_, pacman = pacman_@(Pac {pacPos = pacPos_}), ghosts = ghosts_,
                         score = score_@(Sc {currScore = currScore_})}) 
   = gstate_ { grid = newGrid, ghosts = updateGhostForPowerPellet power ghosts_, score = score_ {currScore = newScore}}
     where 
       (newGrid, newScore, power) = fieldCollisionHelper (gamePosToGridPos pacPos_) grid_ currScore_
-      
-updateGhostForPowerPellet :: Bool -> [Ghost] -> [Ghost]
-updateGhostForPowerPellet False ghosts = ghosts 
-updateGhostForPowerPellet True ghosts = map makeGhostRun ghosts
 
-makeGhostRun :: Ghost -> Ghost
-makeGhostRun ghost@(Gho {ghostState = ghostState_}) | ghostState_ == Normal = ghost{ ghostState = Run} 
-                                                    | otherwise             = ghost
-
+-- | Given pacman's position a grid and the current score, update the grid, score and a bool stating if pacman ate a power pellet
 fieldCollisionHelper :: Point -> Grid -> Int -> (Grid, Int, Bool)
-fieldCollisionHelper pos grid@(square@(fieldPos, field): restGrid) oldScore | pos == fieldPos = (newSquare : restGrid, newScore, power)
-                                                                            | otherwise       = (square : recursionGrid, recursionScore, False)
-                                                                              where
-                                                                                (newSquare, newScore, power) = squarePacmanCollision square oldScore
-                                                                                (recursionGrid, recursionScore, False) = fieldCollisionHelper pos restGrid oldScore
+fieldCollisionHelper pos grid@(square@(fieldPos, field): restGrid) oldScore 
+                    | pos == fieldPos = (newSquare : restGrid, newScore, power)
+                    | otherwise       = (square : recursionGrid, recursionScore, newBool)
+                      where
+                        (newSquare, newScore, power) = squarePacmanCollision square oldScore
+                        (recursionGrid, recursionScore, newBool) = fieldCollisionHelper pos restGrid oldScore
 
+-- | Given a square pacman collides with return what the square should turn into, the new score and if it was a Power Pellet
 squarePacmanCollision :: Square -> Int -> (Square, Int, Bool)
 squarePacmanCollision square@(fieldPos, field) score | field == Pellet = ((fieldPos, Empty), score + 10, False)
                                                      | field == Power  = ((fieldPos, Empty), score + 100, True)
                                                      | field == Cherry = ((fieldPos, Empty), score + 500, False)
                                                      | otherwise = (square, score, False)
 
+-- | If given True make all the ghosts get affected by the PowerPellet
+updateGhostForPowerPellet :: Bool -> [Ghost] -> [Ghost]
+updateGhostForPowerPellet False ghosts = ghosts 
+updateGhostForPowerPellet True ghosts = map makeGhostRun ghosts
 
+-- | Give a ghost and make it run if it is in its normal state
+makeGhostRun :: Ghost -> Ghost
+makeGhostRun ghost@(Gho {ghostState = ghostState_}) | ghostState_ == Normal = ghost{ ghostState = Run} 
+                                                    | otherwise             = ghost
+
+-- | Return the grid position for a given game position
 gamePosToGridPos :: Point -> Point
 gamePosToGridPos (0, 0) = (0                  , 0)
 gamePosToGridPos (x, 0) = (roundFloat (x / 20), 0)
 gamePosToGridPos (0, y) = (0                  , roundFloat (-y / 20))
 gamePosToGridPos (x, y) = (roundFloat (x / 20), roundFloat (-y / 20))
 
+-- | Round the Float to its nearest Int and make it a Float again
 roundFloat :: Float -> Float
 roundFloat x = fromIntegral $ round x
 
+-- | Handle the collisions with ghosts
 ghostCollisions :: GameState -> GameState
-ghostCollisions gstate_@(GameState {pacman = pacman_@(Pac {pacPos = pacPos_, pacLives = pacLives_}), ghosts = ghosts_, state = state_}) = 
-  gstate_ {pacman = pacman_{pacLives = newLives}, ghosts = newGhosts, state = newState}
+ghostCollisions gstate_@(GameState {pacman = pacman_@(Pac {pacPos = pacPos_, pacLives = pacLives_}), ghosts = ghosts_, state = state_}) 
+    | pacmanHurt = resetLvl gstate_
+    | otherwise  = gstate_ {ghosts = newGhosts}
     where 
-      newState  = undefined 
-      newGhosts = undefined
-      newLives  = undefined
+      newGhosts = map fst ghostBools
+      ghostBools = map (handleGhostCollison . checkGhostCollision pacPos_) ghosts_
+      pacmanHurt = any snd ghostBools
 
+-- | Given a ghost and if it collided with pacman handle the collision
 handleGhostCollison :: (Ghost, Bool) -> (Ghost, Bool)
-handleGhostCollison (ghost, False) = (ghost, False) 
-handleGhostCollison (ghost@(Gho{ghostState = Run}), True) = (ghost{ ghostState = Dead}, False)
-handleGhostCollison (ghost@(Gho{ghostState = Normal}), True) = (ghost, True)
-handleGhostCollison (ghost@(Gho{ghostState = Dead}), True) = (ghost, False)
+handleGhostCollison (ghost@(Gho{ghostState = ghostState_}), collided) 
+    | not collided = (ghost, collided)
+    | ghostState_ == Run = (ghost{ ghostState = Dead}, False)
+    | ghostState_ == Normal = (ghost, True)
+    | ghostState_ == Dead = (ghost, False)
 
+-- | Given pacman's position and a ghost determine if they collide
 checkGhostCollision :: Point -> Ghost -> (Ghost, Bool)
-checkGhostCollision (xP, yP) ghost@(Gho{ghostPos = (xG,yG)}) | (xP > xG && xP - 20 > xG) || (xP < xG && xP + 20 < xG)
-                                                                || (yP > yG && yP - 20 > yG) || (yP < yG && yP + 20 < yG) = (ghost, False)
-                                                             | otherwise = (ghost, True)
+checkGhostCollision (xP, yP) ghost@(Gho{ghostPos = (xG,yG)}) 
+  | (xP > xG && xP - dangerDistance > xG) || (xP < xG && xP + dangerDistance < xG)
+    || (yP > yG && yP - dangerDistance > yG) || (yP < yG && yP + dangerDistance < yG) = (ghost, False)
+  | otherwise = (ghost, True)
+    where
+      -- If we are strict that when bounding boxes collide pacman dies it feels unfair thus we introduced pitty giving pacman some room
+      dangerDistance = pacmanWidth - pitty
+      pacmanWidth = 20
+      pitty = 4
 
 -- | Regulate the state for the game state
 regulateState :: GameState -> GameState
