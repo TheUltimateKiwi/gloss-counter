@@ -5,6 +5,7 @@ import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Game
 import System.Random
 import Control.Arrow (Arrow(second))
+import Foreign (toBool)
 
 -- | Handle one iteration of the game
 step :: Float -> GameState -> IO GameState
@@ -13,25 +14,49 @@ step secs gstate | state gstate == Playing = return $ collision $ movement $ spa
 
 -- | Update the movement for the game state
 movement :: GameState -> GameState
-movement gstate = gstate { pacman = pacMovement' $ pacman gstate}--, ghosts = ghostMovement $ ghosts gstate}
+movement gstate = gstate { pacman = pacMovement (pacman gstate) (grid gstate)}--, ghosts = ghostMovement $ ghosts gstate}
 
-pacMovement' :: Pacman -> Pacman  -- | Pacman movement for each step
-pacMovement' pacman_@(Pac {pacPos = pacPos, pacDir = currDir, pacDesDir = desDir})
-  | validDirection pacPos desDir  = pacman_ { pacPos = goToDirection pacPos desDir, pacDir = desDir}
-  | validDirection pacPos currDir = pacman_ { pacPos = goToDirection pacPos currDir}
+pacMovement :: Pacman -> Grid -> Pacman  -- | Pacman movement for each step
+pacMovement pacman_@(Pac {pacPos = pacPos, pacDir = currDir, pacDesDir = desDir}) grid
+  | validDirection pacPos desDir grid  = pacman_ { pacPos = goToDirection pacPos speed desDir, pacDir = desDir}
+  | validDirection pacPos currDir grid = pacman_ { pacPos = goToDirection pacPos speed currDir}
   | otherwise                     = pacman_ { pacDir = X }
+    where 
+      speed = 2
 
-goToDirection :: Point -> Direction -> Point
-goToDirection (x, y) dir | dir == N = (x        , y + speed)
+-- | Increment the given point with a given speed in the given direction 
+goToDirection :: Point -> Float -> Direction -> Point
+goToDirection (x, y) speed dir | dir == N = (x        , y + speed)
                          | dir == E = (x + speed, y        )
                          | dir == S = (x        , y - speed)
                          | dir == W = (x - speed, y        )
                          | dir == X = (x        , y        )
-                            where
-                              speed = 2
 
-validDirection :: Point -> Direction -> Bool
-validDirection pos dir = True -- implementation of not going through walls.
+-- | Check for a given point and direction in a grid if it is a valid direction to go
+validDirection :: Point -> Direction -> Grid -> Bool
+validDirection pos dir grid = firstWallCheck || secondWallCheck
+  where 
+    wallCheckPointsTuple = wallCheckPoints pos dir
+    firstWallCheck = wallCheck  (gamePosToGridPos $ fst wallCheckPointsTuple) grid 
+    secondWallCheck = wallCheck (gamePosToGridPos $ snd wallCheckPointsTuple) grid 
+
+-- | Get the points for a sprite location that need to be checked if there is a wall
+wallCheckPoints :: Point -> Direction -> (Point, Point)
+wallCheckPoints (x, y) dir | dir == N = ((x, y + 1), (x + 20, y + 1))
+                        | dir == E = ((x + 21, y), (x + 21, y - 20))
+                        | dir == S = ((x, y - 21), (x + 20, y - 21))
+                        | dir == W = ((x - 1, y), (x - 1, y -20))
+                        | dir == X = ((x, y), (x, y))
+
+-- | Given a location get the middle of that sprite
+centerPointOfSprite :: Point -> Point
+centerPointOfSprite point@(x,y) = (x + 10, y + 10)
+
+-- | Given a position on a grid state if there is a wall
+wallCheck :: Point -> Grid -> Bool
+wallCheck pos grid@(square@(fieldPos, field): restGrid) 
+  | pos == fieldPos = field == Wall
+  | otherwise       = wallCheck pos restGrid
 
   -- | GHOST movement for each step
 ghostMovement :: [Ghost] -> [Ghost]
@@ -40,8 +65,10 @@ ghostMovement = map singularGhostMovement
 singularGhostMovement :: Ghost -> Ghost
 singularGhostMovement ghost_@(Gho {ghostPos = ghopos, ghostDir = ghodir})
   | isAtCrossRoad ghopos = let decidedDir = ghostDirectionDecider ghost_
-                            in ghost_ {ghostPos = goToDirection ghopos decidedDir, ghostDir = decidedDir}
-  | otherwise                = ghost_ {ghostPos = goToDirection ghopos ghodir}
+                            in ghost_ {ghostPos = goToDirection ghopos speed decidedDir, ghostDir = decidedDir}
+  | otherwise                = ghost_ {ghostPos = goToDirection ghopos speed ghodir}
+    where
+      speed = 1
 
 isAtCrossRoad :: Point -> Bool
 isAtCrossRoad point = undefined -- implement checking if the ghost is at a crossroad
@@ -97,7 +124,7 @@ makeGhostRun ghost@(Gho {ghostState = ghostState_}) | ghostState_ == Normal = gh
 
 -- | Return the grid position for a given game position
 gamePosToGridPos :: Point -> Point
-gamePosToGridPos (0, 0) = (0                  , 0)
+gamePosToGridPos (0, 0) = (0                  , 0)  
 gamePosToGridPos (x, 0) = (roundFloat (x / 20), 0)
 gamePosToGridPos (0, y) = (0                  , roundFloat (-y / 20))
 gamePosToGridPos (x, y) = (roundFloat (x / 20), roundFloat (-y / 20))
