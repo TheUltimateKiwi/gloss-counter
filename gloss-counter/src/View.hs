@@ -8,18 +8,17 @@ view gs = return (viewPure gs)
 
 viewPure :: GameState -> Picture
 viewPure gstate@GameState {
-    grid = grid_ ,
+    
     pacman = Pac {pacPos = (c,d), pacLives = lives_},
     score = Sc {currScore = score_,
     highScore = highScore_},
-    ghosts = ghosts_,
-    sprites = [pacman, pellet, empty, cherry, power, wall, red_, blue_, pink_, yellow_],
+    sprites = [pacman, pellet, empty, cherry, power, wall, red_, blue_, pink_, yellow_, weak, dead],
     state = state_ } =
 
     let gridPicture = Pictures $ map (\sq -> squareToPic sq [pellet,empty,power,cherry,wall]) (grid gstate)
     
         pacPicture = translate gridoffsetX gridoffsetY $ translate c d pacman
-        ghostsPicture = Pictures $ map (\gh -> ghostToPic gh [red_,blue_,pink_,yellow_]) ghosts_
+        ghostsPicture = Pictures $ map (\gh -> ghostToPic gh [red_,blue_,pink_,yellow_, weak, dead]) (ghosts gstate)
         scoretxt     = Pictures [translate (-100) 240 $ scale 0.3 0.3 $ color white $ Text ("Score  " ++ show score_), highscoretxt]
         highscoretxt = translate (-80) 200 $ scale 0.15 0.15 $ color white $ Text ("HighScore  " ++ show highScore_)
         livestxt = translate (-20) (-290) $ scale 0.1 0.1 $ color white $ Text ("Lives: " ++ show lives_)
@@ -31,7 +30,7 @@ viewPure gstate@GameState {
             where transparentGreyOverlay = scale 5 5 $ color (makeColor 0.8 0.8 0.8 0.8) $ polygon $ rectanglePath 340 340
 
         fullPicture  = Pictures [gridPicture, ghostsPicture, pacPicture, scoretxt, statetxt, livestxt]
-    
+
     in fullPicture
 
 squareToPic :: Square -> [Picture] -> Picture
@@ -50,12 +49,14 @@ fieldToPic Cherry = 3
 fieldToPic Wall = 4
 
 ghostToPic :: Ghost -> [Picture] -> Picture
-ghostToPic gho pics = translate gridoffsetX gridoffsetY $ translate x y $ pics !! ghostTypeToPic (ghostType gho)
+ghostToPic gho pics = translate gridoffsetX gridoffsetY $ translate x y $ pics !! ghostTypeToPic (ghostType gho) (ghostState gho)
     where (x,y) = ghostPos gho
 
-ghostTypeToPic :: GhostType -> Int
-ghostTypeToPic Blinky = 0
-ghostTypeToPic Inky = 1
-ghostTypeToPic Pinky = 2
-ghostTypeToPic Clyde = 3
+ghostTypeToPic :: GhostType -> GhostState -> Int
+ghostTypeToPic _ Dead  = 5
+ghostTypeToPic _ Run   = 4
+ghostTypeToPic Blinky _= 0
+ghostTypeToPic Inky _  = 1
+ghostTypeToPic Pinky _ = 2
+ghostTypeToPic Clyde _ = 3
 

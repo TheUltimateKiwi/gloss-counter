@@ -101,7 +101,9 @@ loadSprites = do
     blue_ <- giveBitMap "blue"
     pink_ <- giveBitMap "pink"
     yellow_ <- giveBitMap "yellow"
-    return [pacman, pellet, empty, cherry, power, wall, red_, blue_, pink_, yellow_]
+    weak <- giveBitMap "weak"
+    dead <- giveBitMap "dead"
+    return [pacman, pellet, empty, cherry, power, wall, red_, blue_, pink_, yellow_, weak, dead]
   
 
 giveBitMap :: String -> IO Picture
@@ -112,9 +114,11 @@ giveBitMap "cherry" = loadBMP "./Pictures/cherry_tile.bmp"
 giveBitMap "power"  = loadBMP "./Pictures/powerpellet_tile.bmp"
 giveBitMap "wall"   = loadBMP "./Pictures/wall_tile.bmp"
 giveBitMap "red"    = loadBMP "./Pictures/red_ghost_tile.bmp"
-giveBitMap "blue"   = loadBMP "./Pictures/blue_ghost_tile.bmp"
+giveBitMap "blue"   = loadBMP "./Pictures/blue_ghost.bmp"
 giveBitMap "yellow" = loadBMP "./Pictures/yellow_ghost_tile.bmp"
 giveBitMap "pink"   = loadBMP "./Pictures/pink_ghost_tile.bmp"
+giveBitMap "weak"   = loadBMP "./Pictures/vulnurable_ghost.bmp"
+giveBitMap "dead"   = loadBMP "./Pictures/dead_ghost.bmp"
   
 stringToGrid :: String -> [Square]
 stringToGrid str = concat _indexfieldlsit
