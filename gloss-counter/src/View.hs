@@ -27,7 +27,7 @@ viewPure gameState@GameState {
 
         statetxt| state_ == Playing = Pictures []
                 | state_ == Paused = Pictures [transparentGreyOverlay, translate (-160) 0 $ scale 0.65 0.65 $ text "PAUSED" ]
-                | state_ == Starting = Pictures [transparentGreyOverlay, translate (-160) 0 $ scale 0.35 0.35 $ text ("Starting in " ++ show (round (5 - _time))) ]
+                | state_ == Starting = Pictures [transparentGreyOverlay, translate (-160) 0 $ scale 0.35 0.35 $ text ("Starting in " ++ show (round (3 - _time))) ]
                 | state_ == Ended = Pictures [transparentGreyOverlay, translate (-200) 0 $ scale 0.2 0.2 $ text "You Lost Press Enter To Restart" ]
             where transparentGreyOverlay = scale 5 5 $ color (makeColor 0.8 0.8 0.8 0.8) $ polygon $ rectanglePath 340 340
 

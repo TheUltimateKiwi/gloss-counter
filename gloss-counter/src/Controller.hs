@@ -9,7 +9,7 @@ import Foreign (toBool)
 
 -- | Handle one iteration of the game
 step :: Float -> GameState -> IO GameState
-step secs gstate | state gstate == Playing = return $ collision $ movement $ spawnCherry gstate
+step secs gstate | state gstate == Playing = regulateState $ collision $ movement $ spawnCherry gstate
                  | otherwise = regulateState gstate { elapsedTime = elapsedTime gstate + secs }  --If gameplay is paused or Ended no need to do movement or other things
 
 -- | Update the movement for the game state
@@ -70,7 +70,8 @@ wallCheck pos grid@(square@(fieldPos, field): restGrid)
   | pos == fieldPos = field == Wall
   | otherwise       = wallCheck pos restGrid
 
-  -- | GHOST movement for each step
+
+-- | GHOST movement for each step
 ghostMovement :: [Ghost] -> [Ghost]
 ghostMovement = map singularGhostMovement
 
@@ -178,14 +179,16 @@ checkGhostCollision (xP, yP) ghost@(Gho{ghostPos = (xG,yG)})
 -- | Regulate the state for the game state
 regulateState :: GameState -> IO GameState
 regulateState gstate | state gstate == Starting && elapsedTime gstate >= timeToStart = return gstate { state = Playing }
-                     | state gstate == Ended && highScore (score gstate) > currScore (score gstate) = do 
-                                                                                                        putStr "writing highscore"
+                     | state gstate == Ended && (currScore (score gstate) > highScore (score gstate)) = do 
                                                                                                         writeFile "./Txtfiles/HighScore.txt" (show (currScore (score gstate))) 
-                                                                                                        return gstate 
-                     |otherwise = return gstate
-  where timeToStart = 5
-
-
+                                                                                                        return gstate { score = (score gstate) {highScore = currScore (score gstate)}} --should prevent infinitely writing this file again and again.
+                     | state gstate == Playing && not (anyPallets (grid gstate)) = followUpState randomNumber gstate {rng = newGen}
+                     | otherwise = return gstate
+  where timeToStart = 3
+        (randomNumber, newGen) = randomR (1,3) (rng gstate)  :: (Int, StdGen)
+anyPallets :: Grid -> Bool
+anyPallets = any isPallet
+  where isPallet ((_, _), field) = field == Pellet
 
 -- | Spawning randomly a cherry at a random spot.
 spawnCherry :: GameState -> GameState
