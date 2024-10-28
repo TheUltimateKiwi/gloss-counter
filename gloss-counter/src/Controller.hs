@@ -20,7 +20,7 @@ pacMovement :: Pacman -> Grid -> Pacman  -- | Pacman movement for each step
 pacMovement pacman_@(Pac {pacPos = pacPos, pacDir = currDir, pacDesDir = desDir}) grid
   | validDirection pacPos desDir grid  = pacman_ { pacPos = goToDirection pacPos speed desDir, pacDir = desDir}
   | validDirection pacPos currDir grid = pacman_ { pacPos = goToDirection pacPos speed currDir}
-  | otherwise                     = pacman_ { pacDir = X }
+  | otherwise                          = pacman_ { pacDir = X }
     where 
       speed = 2
 
@@ -34,23 +34,35 @@ goToDirection (x, y) speed dir | dir == N = (x        , y + speed)
 
 -- | Check for a given point and direction in a grid if it is a valid direction to go
 validDirection :: Point -> Direction -> Grid -> Bool
-validDirection pos dir grid = firstWallCheck || secondWallCheck
+validDirection pos dir grid = not firstWallCheck && not secondWallCheck
   where 
     wallCheckPointsTuple = wallCheckPoints pos dir
-    firstWallCheck = wallCheck  (gamePosToGridPos $ fst wallCheckPointsTuple) grid 
-    secondWallCheck = wallCheck (gamePosToGridPos $ snd wallCheckPointsTuple) grid 
+    firstWallCheck = wallCheck  (gamePosToGridPosExact $ fst wallCheckPointsTuple) grid 
+    secondWallCheck = wallCheck (gamePosToGridPosExact $ snd wallCheckPointsTuple) grid 
+
+gamePosToGridPosExact :: Point -> Point
+gamePosToGridPosExact (0, 0) = (0                  , 0)  
+gamePosToGridPosExact (x, 0) = (floorFloat (x / 20), 0)
+gamePosToGridPosExact (0, y) = (0                  , floorFloat (-y / 20))
+gamePosToGridPosExact (x, y) = (floorFloat (x / 20), floorFloat (-y / 20))
+
+-- | Round the Float to its nearest Int and make it a Float again
+floorFloat :: Float -> Float
+floorFloat x = fromIntegral $ floor x
 
 -- | Get the points for a sprite location that need to be checked if there is a wall
 wallCheckPoints :: Point -> Direction -> (Point, Point)
-wallCheckPoints (x, y) dir | dir == N = ((x, y + 1), (x + 20, y + 1))
-                        | dir == E = ((x + 21, y), (x + 21, y - 20))
-                        | dir == S = ((x, y - 21), (x + 20, y - 21))
-                        | dir == W = ((x - 1, y), (x - 1, y -20))
-                        | dir == X = ((x, y), (x, y))
+wallCheckPoints (x, y) dir | dir == N = ((x+extra, y + 1), (x + 20 - extra, y + 1))
+                           | dir == E = ((x + 21, y - extra), (x + 21, y - 20 + extra))
+                           | dir == S = ((x+ extra, y - 21), (x + 20- extra, y - 21))
+                           | dir == W = ((x - 1, y- extra), (x - 1, y -20+ extra))
+                           | dir == X = ((x, y), (x, y))
+                              where
+                                extra = 1
 
 -- | Given a location get the middle of that sprite
 centerPointOfSprite :: Point -> Point
-centerPointOfSprite point@(x,y) = (x + 10, y + 10)
+centerPointOfSprite point@(x,y) = (x + 10.5, y + 10.5)
 
 -- | Given a position on a grid state if there is a wall
 wallCheck :: Point -> Grid -> Bool
@@ -122,7 +134,7 @@ makeGhostRun :: Ghost -> Ghost
 makeGhostRun ghost@(Gho {ghostState = ghostState_}) | ghostState_ == Normal = ghost{ ghostState = Run} 
                                                     | otherwise             = ghost
 
--- | Return the grid position for a given game position
+-- | Return the closest grid position for a given game position for sprites
 gamePosToGridPos :: Point -> Point
 gamePosToGridPos (0, 0) = (0                  , 0)  
 gamePosToGridPos (x, 0) = (roundFloat (x / 20), 0)
