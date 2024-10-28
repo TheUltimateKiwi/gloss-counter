@@ -7,18 +7,17 @@ view gs = return (viewPure gs)
 
 
 viewPure :: GameState -> Picture
-viewPure gameState@GameState {
+viewPure gstate@GameState {
     grid = grid_ ,
     pacman = Pac {pacPos = (c,d), pacLives = lives_},
     score = Sc {currScore = score_,
     highScore = highScore_},
     ghosts = ghosts_,
     sprites = [pacman, pellet, empty, cherry, power, wall, red_, blue_, pink_, yellow_],
-    state = state_,
-    elapsedTime = _time } =
+    state = state_ } =
 
-    let gridPicture = Pictures $ map (\sq -> squareToPic sq [pellet,empty,power,cherry,wall]) grid_
-
+    let gridPicture = Pictures $ map (\sq -> squareToPic sq [pellet,empty,power,cherry,wall]) (grid gstate)
+    
         pacPicture = translate gridoffsetX gridoffsetY $ translate c d pacman
         ghostsPicture = Pictures $ map (\gh -> ghostToPic gh [red_,blue_,pink_,yellow_]) ghosts_
         scoretxt     = Pictures [translate (-100) 240 $ scale 0.3 0.3 $ color white $ Text ("Score  " ++ show score_), highscoretxt]
@@ -27,12 +26,12 @@ viewPure gameState@GameState {
 
         statetxt| state_ == Playing = Pictures []
                 | state_ == Paused = Pictures [transparentGreyOverlay, translate (-160) 0 $ scale 0.65 0.65 $ text "PAUSED" ]
-                | state_ == Starting = Pictures [transparentGreyOverlay, translate (-160) 0 $ scale 0.35 0.35 $ text ("Starting in " ++ show (round (3 - _time))) ]
+                | state_ == Starting = Pictures [transparentGreyOverlay, translate (-160) 0 $ scale 0.35 0.35 $ text ("Starting in " ++ show (round (3 - elapsedTime gstate))) ]
                 | state_ == Ended = Pictures [transparentGreyOverlay, translate (-200) 0 $ scale 0.2 0.2 $ text "You Lost Press Enter To Restart" ]
             where transparentGreyOverlay = scale 5 5 $ color (makeColor 0.8 0.8 0.8 0.8) $ polygon $ rectanglePath 340 340
 
         fullPicture  = Pictures [gridPicture, ghostsPicture, pacPicture, scoretxt, statetxt, livestxt]
-
+    
     in fullPicture
 
 squareToPic :: Square -> [Picture] -> Picture
@@ -53,6 +52,7 @@ fieldToPic Wall = 4
 ghostToPic :: Ghost -> [Picture] -> Picture
 ghostToPic gho pics = translate gridoffsetX gridoffsetY $ translate x y $ pics !! ghostTypeToPic (ghostType gho)
     where (x,y) = ghostPos gho
+
 ghostTypeToPic :: GhostType -> Int
 ghostTypeToPic Blinky = 0
 ghostTypeToPic Inky = 1

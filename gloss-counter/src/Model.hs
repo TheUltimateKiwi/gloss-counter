@@ -49,16 +49,19 @@ initialState = do
   return (GameState{
     grid = grid_,
     pacman = (Pac { pacPos = (10*20,-16*20), pacDir = X, pacDesDir = X, pacLives = 3}),
-    ghosts = [(Gho {ghostPos = (8*20,-10*20), ghostDir = E, ghostType = Blinky, ghostState = Normal}),
-              (Gho {ghostPos = (9*20,-10*20), ghostDir = S, ghostType = Inky, ghostState = Normal}),
-              (Gho {ghostPos = (11*20,-10*20), ghostDir = N, ghostType = Pinky, ghostState = Normal}),
-              (Gho {ghostPos = (12*20,-10*20), ghostDir = W, ghostType = Clyde, ghostState = Normal})],
+    ghosts = basicGhosts,
     score = (Sc {currScore = 0, highScore = read high_score}), --write highscore on death??
     state = Starting,
     rng = generator,
     elapsedTime = 0,
     sprites = spritesPure
   })    
+
+basicGhosts :: [Ghost]
+basicGhosts =  [(Gho {ghostPos = (8*20,-10*20), ghostDir = X, ghostType = Blinky, ghostState = Normal}),
+                (Gho {ghostPos = (9*20,-10*20), ghostDir = X, ghostType = Inky, ghostState = Normal}),
+                (Gho {ghostPos = (11*20,-10*20), ghostDir = X, ghostType = Pinky, ghostState = Normal}),
+                (Gho {ghostPos = (12*20,-10*20), ghostDir = X, ghostType = Clyde, ghostState = Normal})]
 
 followUpState :: Int -> GameState -> IO GameState
 followUpState int_ gstate = do 
@@ -71,10 +74,7 @@ followUpState int_ gstate = do
   return (gstate {
     grid = newgrid_,  --grid has now changed to a new one.
     pacman = (pacman gstate) {pacPos = (10*20,-16*20), pacDir = X, pacDesDir = X}, --pacman lives stay consistant
-    ghosts = [(Gho {ghostPos = (8*20,-10*20), ghostDir = X, ghostType = Blinky, ghostState = Normal}),
-              (Gho {ghostPos = (9*20,-10*20), ghostDir = X, ghostType = Inky, ghostState = Normal}),
-              (Gho {ghostPos = (11*20,-10*20), ghostDir = X, ghostType = Pinky, ghostState = Normal}),
-              (Gho {ghostPos = (12*20,-10*20), ghostDir = X, ghostType = Clyde, ghostState = Normal})], -- ghosts are reset
+    ghosts = basicGhosts, -- ghosts are reset
     state = Starting,
     elapsedTime = 0
   }) 
@@ -82,15 +82,12 @@ followUpState int_ gstate = do
 resetLvl :: GameState -> GameState
 resetLvl gstate | pacLives (pacman gstate) <= 0 = gstate {state = Ended} -- Check if you are out of lives.
                 | otherwise = (gstate {
-      pacman = (pacman gstate) {pacPos = (10*20,-16*20), pacDir = X, pacDesDir = X, pacLives = pacLives (pacman gstate) - 1}, --pacman lives stay consistant
-      ghosts = [(Gho {ghostPos = (8*20,-10*20), ghostDir = X, ghostType = Blinky, ghostState = Normal}),
-                (Gho {ghostPos = (9*20,-10*20), ghostDir = X, ghostType = Inky, ghostState = Normal}),
-                (Gho {ghostPos = (11*20,-10*20), ghostDir = X, ghostType = Pinky, ghostState = Normal}),
-                (Gho {ghostPos = (12*20,-10*20), ghostDir = X, ghostType = Clyde, ghostState = Normal})], -- ghosts are reset
+      pacman = (pacman gstate) {pacPos = (10*20,-16*20), pacDir = X, pacDesDir = X, pacLives = pacLives (pacman gstate) - 1}, --pacman lives stay are lowered by one
+      ghosts = basicGhosts, -- ghosts are reset
       state = Starting,
       elapsedTime = 0
     })
--- score should carry over here and highscore is consistant, same for gen and sprites
+-- score should carry over here and highscore is consistant, same for gen, sprites and grid
 
 loadSprites :: IO [Picture]
 loadSprites = do 
