@@ -11,7 +11,7 @@ import Data.Data (ConstrRep(FloatConstr))
 
 -- | Handle one iteration of the game
 step :: Float -> GameState -> IO GameState
-step secs gstate | state gstate == Playing = regulateState $ collision $ movement $ spawnCherry gstate { elapsedTime = elapsedTime gstate + secs }
+step secs gstate | state gstate == Playing = regulateState $ ghostStateCheck $ collision $ movement $ spawnCherry gstate { elapsedTime = elapsedTime gstate + secs }
                  | otherwise = regulateState gstate { elapsedTime = elapsedTime gstate + secs }  --If gameplay is paused or Ended no need to do movement or other things
 
 -- | Update the movement for the game state
@@ -75,7 +75,7 @@ wallCheck pos grid@(square@(fieldPos, field): restGrid)
 
   -- | GHOST movement for each step
 ghostMovement :: [Ghost] -> Grid -> Pacman -> [Ghost]
-ghostMovement ghosts grid pacman_@(Pac{pacPos = pacPos_, pacDir = pacDir_}) = map singularGhostMovement (ghostStateCheck ghosts)
+ghostMovement ghosts grid pacman_@(Pac{pacPos = pacPos_, pacDir = pacDir_}) = map singularGhostMovement ghosts
   where 
     singularGhostMovement :: Ghost -> Ghost
     singularGhostMovement ghost_@(Gho {ghostPos = ghoPos_, ghostDir = ghodir})
@@ -118,7 +118,7 @@ ghostMovement ghosts grid pacman_@(Pac{pacPos = pacPos_, pacDir = pacDir_}) = ma
               clydeAlgoritm = snd $ clydeDir (directionsWithScore pacPos_)
               inkyAlgoritm = snd $ bestDir (directionsWithScore inkyDesPos)
               deadAlgoritm = snd $ bestDir (directionsWithScore middleOfGrid) -- Temporary for the place where they go when die
-              runAlgoritm = snd $ bestDir (directionsWithScore middleOfGrid) -- Temporary for the place where they go when run
+              runAlgoritm = snd $ worstDir (directionsWithScore middleOfGrid) -- Temporary for the place where they go when run
 
               middleOfGrid = (x, y)
                 where 
@@ -141,6 +141,14 @@ ghostMovement ghosts grid pacman_@(Pac{pacPos = pacPos_, pacDir = pacDir_}) = ma
               clydeDirHelper currDir [] = currDir
               clydeDirHelper currDir (x : xs) | fst x < fst currDir && fst x > 80 = clydeDirHelper x xs 
                                               | otherwise                        = clydeDirHelper currDir xs
+              worstDir :: [(Float, Direction)] -> (Float, Direction)
+              worstDir [] = error "don't give an empty list to this function"
+              worstDir (x : xs)   = worstDirHelper x xs
+
+              worstDirHelper :: (Float, Direction) -> [(Float, Direction)] -> (Float, Direction)
+              worstDirHelper currDir [] = currDir
+              worstDirHelper currDir (x : xs) | fst x > fst currDir = worstDirHelper x xs 
+                                              | otherwise           = worstDirHelper currDir xs
 
               bestDir :: [(Float, Direction)] -> (Float, Direction)
               bestDir [] = error "don't give an empty list to this function"
@@ -161,15 +169,15 @@ ghostMovement ghosts grid pacman_@(Pac{pacPos = pacPos_, pacDir = pacDir_}) = ma
                                             (x1, y1) = desPos 
                                             distBetweenPacman (x2, y2) = sqrt( (x2 - x1) ^ 2 + (y2 - y1) ^ 2)
                             
-ghostStateCheck :: [Ghost] -> [Ghost]
-ghostStateCheck = map ghostStateCheck'
+ghostStateCheck :: GameState -> GameState
+ghostStateCheck gstate = gstate {ghosts = map ghostStateCheck' (ghosts gstate)}
   where
     ghostStateCheck' :: Ghost -> Ghost
-    ghostStateCheck' ghost | ghostState ghost == Dead && ghostPos ghost == (200,-200) = ghost{ghostState = Normal}
-                           | ghostState ghost == Run && ghostPos ghost == (200,-200) = ghost{ghostState = Normal}
+    ghostStateCheck' ghost | ghostState ghost == Dead && validPos (ghostPos ghost) = ghost{ghostState = Normal}
                            | otherwise = ghost
                             where 
-                              --validPos (x, y)= 
+                              validPos :: Point -> Bool
+                              validPos (x, y) = 160 <= x && x <= 240 && (-180) >= y && y >= (-220)
 
 
 -- | Update the collision for the game state
