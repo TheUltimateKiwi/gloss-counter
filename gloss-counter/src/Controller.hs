@@ -178,11 +178,11 @@ collision gstate = ghostCollisions $ fieldCollision gstate
 
 -- | Given a gamestate handle the collision for pacman with fields
 fieldCollision :: GameState -> GameState
-fieldCollision gstate_@(GameState {grid = grid_, pacman = pacman_@(Pac {pacPos = pacPos_}), ghosts = ghosts_,
-                        score = score_@(Sc {currScore = currScore_})}) 
-  = gstate_ { grid = newGrid, ghosts = updateGhostForPowerPellet power ghosts_, score = score_ {currScore = newScore}}
+fieldCollision gstate_
+    | power = gstate_ { grid = newGrid, ghosts = updateGhostForPowerPellet power (ghosts gstate_), score = (score gstate_) {currScore = newScore}, elapsedTime = 0}
+    | otherwise = gstate_ { grid = newGrid, score = (score gstate_) {currScore = newScore}}
     where 
-      (newGrid, newScore, power) = fieldCollisionHelper (gamePosToGridPos pacPos_) grid_ currScore_
+      (newGrid, newScore, power) = fieldCollisionHelper (gamePosToGridPos (pacPos (pacman gstate_))) (grid gstate_) (currScore (score gstate_))
 
 -- | Given pacman's position a grid and the current score, update the grid, score and a bool stating if pacman ate a power pellet
 fieldCollisionHelper :: Point -> Grid -> Int -> (Grid, Int, Bool)
