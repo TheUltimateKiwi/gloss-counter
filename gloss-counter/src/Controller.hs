@@ -87,7 +87,7 @@ ghostMovement ghosts grid pacman_@(Pac{pacPos = pacPos_, pacDir = pacDir_}) = ma
       | otherwise =  ghost_ {ghostPos = ghoPos_, ghostDir = X} 
         where
           speed | ghostState ghost_ == Run  = 1
-                | ghostState ghost_ == Dead = 2
+                | ghostState ghost_ == Dead = 4
                 | ghostType ghost_ == Blinky = 4
                 | otherwise                 = 2
           validDirections = map snd (filter fst (zip directsBool directs))
@@ -118,7 +118,7 @@ ghostMovement ghosts grid pacman_@(Pac{pacPos = pacPos_, pacDir = pacDir_}) = ma
               clydeAlgoritm = snd $ clydeDir (directionsWithScore pacPos_)
               inkyAlgoritm = snd $ bestDir (directionsWithScore inkyDesPos)
               deadAlgoritm = snd $ bestDir (directionsWithScore middleOfGrid) -- Temporary for the place where they go when die
-              runAlgoritm = snd $ worstDir (directionsWithScore middleOfGrid) -- Temporary for the place where they go when run
+              runAlgoritm = snd $ worstDir (directionsWithScore pacPos_) -- Temporary for the place where they go when run
 
               middleOfGrid = (x, y)
                 where 
@@ -157,7 +157,7 @@ ghostMovement ghosts grid pacman_@(Pac{pacPos = pacPos_, pacDir = pacDir_}) = ma
               bestDirHelper :: (Float, Direction) -> [(Float, Direction)] -> (Float, Direction)
               bestDirHelper currDir [] = currDir
               bestDirHelper currDir (x : xs) | fst x < fst currDir = bestDirHelper x xs 
-                                            | otherwise           = bestDirHelper currDir xs
+                                             | otherwise           = bestDirHelper currDir xs
 
               directionValue :: Point -> Direction -> Float
               directionValue desPos dir | dir == N  = distBetweenPacman (xg, yg + speed)
