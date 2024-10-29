@@ -58,10 +58,10 @@ initialState = do
   })    
 
 basicGhosts :: [Ghost]
-basicGhosts =  [(Gho {ghostPos = (8*20,-10*20), ghostDir = X, ghostType = Blinky, ghostState = Normal}),
+basicGhosts =  [(Gho {ghostPos = (10*20,-10*20), ghostDir = X, ghostType = Blinky, ghostState = Normal}),
                 (Gho {ghostPos = (9*20,-10*20), ghostDir = X, ghostType = Inky, ghostState = Normal}),
-                (Gho {ghostPos = (11*20,-10*20), ghostDir = X, ghostType = Pinky, ghostState = Normal}),
-                (Gho {ghostPos = (12*20,-10*20), ghostDir = X, ghostType = Clyde, ghostState = Normal})]
+                (Gho {ghostPos = (8*20,-10*20), ghostDir = X, ghostType = Pinky, ghostState = Normal}),
+                (Gho {ghostPos = (11*20,-10*20), ghostDir = X, ghostType = Clyde, ghostState = Normal})]
 
 followUpState :: Int -> GameState -> IO GameState
 followUpState int_ gstate = do 

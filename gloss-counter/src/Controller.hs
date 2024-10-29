@@ -25,7 +25,7 @@ pacMovement pacman_@(Pac {pacPos = pacPos, pacDir = currDir, pacDesDir = desDir}
   | validDirection pacPos currDir grid = pacman_ { pacPos = goToDirection pacPos speed currDir}
   | otherwise                          = pacman_ { pacDir = X }
     where 
-      speed = 4
+      speed = 2
 
 -- | Increment the given point with a given speed in the given direction 
 goToDirection :: Point -> Float -> Direction -> Point
@@ -87,8 +87,8 @@ ghostMovement ghosts grid pacman_@(Pac{pacPos = pacPos_, pacDir = pacDir_}) = ma
       | otherwise =  ghost_ {ghostPos = ghoPos_, ghostDir = X} 
         where
           speed | ghostState ghost_ == Run  = 1
-                | ghostState ghost_ == Dead = 4
-                | ghostType ghost_ == Blinky = 4
+                | ghostState ghost_ == Dead = 1
+                | ghostType ghost_ == Blinky = 2
                 | otherwise                 = 2
           validDirections = map snd (filter fst (zip directsBool directs))
           directs = [N, E, S, W]
@@ -174,6 +174,7 @@ ghostStateCheck gstate = gstate {ghosts = map ghostStateCheck' (ghosts gstate)}
   where
     ghostStateCheck' :: Ghost -> Ghost
     ghostStateCheck' ghost | ghostState ghost == Dead && validPos (ghostPos ghost) = ghost{ghostState = Normal}
+                           | ghostState ghost == Run && elapsedTime gstate >5 = ghost{ghostState = Normal}
                            | otherwise = ghost
                             where 
                               validPos :: Point -> Bool
@@ -215,8 +216,8 @@ updateGhostForPowerPellet True ghosts = map makeGhostRun ghosts
 
 -- | Give a ghost and make it run if it is in its normal state
 makeGhostRun :: Ghost -> Ghost
-makeGhostRun ghost@(Gho {ghostState = ghostState_}) | ghostState_ == Normal = ghost{ ghostState = Run} 
-                                                    | otherwise             = ghost
+makeGhostRun ghost | ghostState ghost == Normal = ghost{ ghostState = Run} 
+                   | otherwise                  = ghost
 
 -- | Return the closest grid position for a given game position for sprites
 gamePosToGridPos :: Point -> Point
@@ -231,12 +232,12 @@ roundFloat x = fromIntegral $ round x
 
 -- | Handle the collisions with ghosts
 ghostCollisions :: GameState -> GameState
-ghostCollisions gstate_@(GameState {pacman = pacman_@(Pac {pacPos = pacPos_, pacLives = pacLives_}), ghosts = ghosts_, state = state_}) 
+ghostCollisions gstate_ 
     | pacmanHurt = resetLvl gstate_
     | otherwise  = gstate_ {ghosts = newGhosts}
     where 
       newGhosts = map fst ghostBools
-      ghostBools = map (handleGhostCollison . checkGhostCollision pacPos_) ghosts_
+      ghostBools = map (handleGhostCollison . checkGhostCollision (pacPos (pacman gstate_))) (ghosts gstate_)
       pacmanHurt = any snd ghostBools
 
 -- | Given a ghost and if it collided with pacman handle the collision
@@ -279,7 +280,7 @@ spawnCherry gstate | randomNumber == 1 = gstate {grid = cherryInserter newGen $ 
                    | otherwise = gstate{rng = newGen}
   where generator = rng gstate
         (randomNumber, newGen) = randomR (1, cherrySpawnChance) generator  :: (Int, StdGen)
-        cherrySpawnChance = 250 --1/chance so the higher this number the lower the chance
+        cherrySpawnChance = 600 --1/chance so the higher this number the lower the chance
 
 cherryInserter :: StdGen -> Grid -> Grid
 cherryInserter gen grid_ | empties /= [] = replaceAt' ( findSq randomNumber Cherry empties ) grid_

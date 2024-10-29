@@ -14,7 +14,7 @@ main =
         startState <- initialState
         playIO (InWindow "Counter" (600, 600) (0, 0)) -- Or FullScreen
               black            -- Background color
-              30               -- Frames per second
+              60               -- Frames per second
               startState       -- Initial state
               view             -- View function
               input            -- Event function
