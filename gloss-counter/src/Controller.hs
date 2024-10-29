@@ -9,7 +9,7 @@ import Foreign (toBool)
 
 -- | Handle one iteration of the game
 step :: Float -> GameState -> IO GameState
-step secs gstate | state gstate == Playing = regulateState $ collision $ movement $ spawnCherry gstate
+step secs gstate | state gstate == Playing = regulateState $ collision $ movement $ spawnCherry gstate { elapsedTime = elapsedTime gstate + secs }
                  | otherwise = regulateState gstate { elapsedTime = elapsedTime gstate + secs }  --If gameplay is paused or Ended no need to do movement or other things
 
 -- | Update the movement for the game state

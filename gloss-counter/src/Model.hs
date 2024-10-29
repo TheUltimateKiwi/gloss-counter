@@ -91,7 +91,9 @@ resetLvl gstate | pacLives (pacman gstate) <= 0 = gstate {state = Ended} -- Chec
 
 loadSprites :: IO [Picture]
 loadSprites = do 
-    pacman <- giveBitMap "Pac-Man"
+    pacman1 <- giveBitMap "pacman_f1"
+    pacman24 <- giveBitMap "pacman_f24"
+    pacman3 <- giveBitMap "pacman_f3"
     pellet <- giveBitMap "pellet"
     empty <- giveBitMap "empty"
     cherry <- giveBitMap "cherry"
@@ -103,11 +105,13 @@ loadSprites = do
     yellow_ <- giveBitMap "yellow"
     weak <- giveBitMap "weak"
     dead <- giveBitMap "dead"
-    return [pacman, pellet, empty, cherry, power, wall, red_, blue_, pink_, yellow_, weak, dead]
+    return [pacman1, pellet, empty, cherry, power, wall, red_, blue_, pink_, yellow_, weak, dead, pacman24, pacman3]
   
 
 giveBitMap :: String -> IO Picture
-giveBitMap "Pac-Man"= loadBMP "./Pictures/Pacman-Basic.bmp"
+giveBitMap "pacman_f1"= loadBMP "./Pictures/pacman_f1.bmp"
+giveBitMap "pacman_f24"= loadBMP "./Pictures/pacman_f24.bmp"
+giveBitMap "pacman_f3"= loadBMP "./Pictures/pacman_f3.bmp"
 giveBitMap "pellet" = loadBMP "./Pictures/pellet_tile.bmp"
 giveBitMap "empty"  = loadBMP "./Pictures/empty_tile.bmp"
 giveBitMap "cherry" = loadBMP "./Pictures/cherry_tile.bmp"
