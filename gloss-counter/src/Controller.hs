@@ -55,13 +55,13 @@ floorFloat x = fromIntegral $ floor x
 
 -- | Get the points for a sprite location that need to be checked if there is a wall
 wallCheckPoints :: Point -> Direction -> (Point, Point)
-wallCheckPoints (x, y) dir | dir == N = ((x+extra, y + 1), (x + 20 - extra, y + 1))
-                           | dir == E = ((x + 21, y - extra), (x + 21, y - 20 + extra))
-                           | dir == S = ((x+ extra, y - 21), (x + 20- extra, y - 21))
-                           | dir == W = ((x - 1, y- extra), (x - 1, y -20+ extra))
+wallCheckPoints (x, y) dir | dir == N = ((x+extra, y + extra), (x + 20 - extra, y + extra))
+                           | dir == E = ((x + 20 + extra, y - extra), (x + 20 + extra, y - 20 + extra))
+                           | dir == S = ((x+ extra, y - 20- extra), (x + 20- extra, y - 20- extra))
+                           | dir == W = ((x - extra, y- extra), (x - extra, y -20+ extra))
                            | dir == X = ((x, y), (x, y))
                               where
-                                extra = 1
+                                extra = 0.5
 
 -- | Given a location get the middle of that sprite
 centerPointOfSprite :: Point -> Point
@@ -139,7 +139,7 @@ ghostMovement ghosts grid pacman_@(Pac{pacPos = pacPos_, pacDir = pacDir_}) = ma
 
               clydeDirHelper :: (Float, Direction) -> [(Float, Direction)] -> (Float, Direction)
               clydeDirHelper currDir [] = currDir
-              clydeDirHelper currDir (x : xs) | fst x < fst currDir && fst x > 80 = clydeDirHelper x xs 
+              clydeDirHelper currDir (x : xs) | fst x < fst currDir && fst x > 120 = clydeDirHelper x xs 
                                               | otherwise                        = clydeDirHelper currDir xs
               worstDir :: [(Float, Direction)] -> (Float, Direction)
               worstDir [] = error "don't give an empty list to this function"
@@ -234,19 +234,20 @@ roundFloat x = fromIntegral $ round x
 ghostCollisions :: GameState -> GameState
 ghostCollisions gstate_ 
     | pacmanHurt = resetLvl gstate_
-    | otherwise  = gstate_ {ghosts = newGhosts}
+    | otherwise  = gstate_ {ghosts = newGhosts, score = (score gstate_ ){currScore = newScore}}
     where 
-      newGhosts = map fst ghostBools
+      newGhosts = map (fst . fst) ghostBools
       ghostBools = map (handleGhostCollison . checkGhostCollision (pacPos (pacman gstate_))) (ghosts gstate_)
-      pacmanHurt = any snd ghostBools
+      pacmanHurt = any (snd . fst) ghostBools
+      newScore = currScore (score gstate_) + sum (map snd ghostBools)
 
 -- | Given a ghost and if it collided with pacman handle the collision
-handleGhostCollison :: (Ghost, Bool) -> (Ghost, Bool)
+handleGhostCollison :: (Ghost, Bool) -> ((Ghost, Bool), Int)
 handleGhostCollison (ghost@(Gho{ghostState = ghostState_}), collided) 
-    | not collided = (ghost, collided)
-    | ghostState_ == Run = (ghost{ ghostState = Dead}, False)
-    | ghostState_ == Normal = (ghost, True)
-    | ghostState_ == Dead = (ghost, False)
+    | not collided = ((ghost, collided), 0)
+    | ghostState_ == Run = ((ghost{ ghostState = Dead}, False), 100)
+    | ghostState_ == Normal = ((ghost, True),0)
+    | ghostState_ == Dead = ((ghost, False), 0)
 
 -- | Given pacman's position and a ghost determine if they collide
 checkGhostCollision :: Point -> Ghost -> (Ghost, Bool)
