@@ -6,6 +6,8 @@ import Graphics.Gloss.Interface.IO.Game
 import System.Random
 import Control.Arrow (Arrow(second))
 import Foreign (toBool)
+import GHC.Base (VecElem(Int16ElemRep))
+import Data.Data (ConstrRep(FloatConstr))
 
 -- | Handle one iteration of the game
 step :: Float -> GameState -> IO GameState
@@ -14,7 +16,8 @@ step secs gstate | state gstate == Playing = regulateState $ collision $ movemen
 
 -- | Update the movement for the game state
 movement :: GameState -> GameState
-movement gstate = gstate { pacman = pacMovement (pacman gstate) (grid gstate)}--, ghosts = ghostMovement $ ghosts gstate}
+movement gstate = gstate { pacman = pacMovement (pacman gstate) (grid gstate), 
+                           ghosts = ghostMovement (ghosts gstate) (grid gstate) (pacman gstate) }
 
 pacMovement :: Pacman -> Grid -> Pacman  -- | Pacman movement for each step
 pacMovement pacman_@(Pac {pacPos = pacPos, pacDir = currDir, pacDesDir = desDir}) grid
@@ -22,7 +25,7 @@ pacMovement pacman_@(Pac {pacPos = pacPos, pacDir = currDir, pacDesDir = desDir}
   | validDirection pacPos currDir grid = pacman_ { pacPos = goToDirection pacPos speed currDir}
   | otherwise                          = pacman_ { pacDir = X }
     where 
-      speed = 2
+      speed = 4
 
 -- | Increment the given point with a given speed in the given direction 
 goToDirection :: Point -> Float -> Direction -> Point
@@ -70,32 +73,104 @@ wallCheck pos grid@(square@(fieldPos, field): restGrid)
   | pos == fieldPos = field == Wall
   | otherwise       = wallCheck pos restGrid
 
+  -- | GHOST movement for each step
+ghostMovement :: [Ghost] -> Grid -> Pacman -> [Ghost]
+ghostMovement ghosts grid pacman_@(Pac{pacPos = pacPos_, pacDir = pacDir_}) = map singularGhostMovement (ghostStateCheck ghosts)
+  where 
+    singularGhostMovement :: Ghost -> Ghost
+    singularGhostMovement ghost_@(Gho {ghostPos = ghoPos_, ghostDir = ghodir})
+      -- | There is more than one valid direction meaning there is a crossroad thus we use the ghostDirectionDecider
+      | length validDirections > 1 = ghost_ {ghostPos = goToDirection ghoPos_ speed ghostDirectionDecider, ghostDir = ghostDirectionDecider}
+      -- | There is one valid direction thus we go there (it is a corner or straight path)
+      | length validDirections == 1 =  ghost_ {ghostPos = goToDirection ghoPos_ speed (head validDirections), ghostDir = head validDirections} 
+      -- | There are no other paths so we stop
+      | otherwise =  ghost_ {ghostPos = ghoPos_, ghostDir = X} 
+        where
+          speed | ghostState ghost_ == Run  = 1
+                | ghostState ghost_ == Dead = 2
+                | ghostType ghost_ == Blinky = 4
+                | otherwise                 = 2
+          validDirections = map snd (filter fst (zip directsBool directs))
+          directs = [N, E, S, W]
+          directsBool = [north, east, south, west]
+          north = ghodir /= S && validDirection ghoPos_ N grid 
+          east  = ghodir /= W && validDirection ghoPos_ E grid 
+          south = ghodir /= N && validDirection ghoPos_ S grid
+          west  = ghodir /= E && validDirection ghoPos_ W grid 
 
--- | GHOST movement for each step
-ghostMovement :: [Ghost] -> [Ghost]
-ghostMovement = map singularGhostMovement
+          ghostDirectionDecider :: Direction
+          ghostDirectionDecider   | gstate == Run   = runAlgoritm -- Go a random dir when on a crossroad
+                                  | gstate == Dead  = deadAlgoritm -- Go back to spawn
+                                  | gtype == Blinky = blinkyAlgoritm -- Go to pacman
+                                  | gtype == Pinky  = pinkyAlgoritm -- Go to two spaces infront of pacman
+                                  | gtype == Clyde  = clydeAlgoritm -- Go to pacman but turn around when in an 4 dot radius
+                                  | otherwise       = inkyAlgoritm -- Go to the avarage of pacman and blinky
+            where
+              gstate = ghostState ghost_
+              gtype = ghostType ghost_
 
-singularGhostMovement :: Ghost -> Ghost
-singularGhostMovement ghost_@(Gho {ghostPos = ghopos, ghostDir = ghodir})
-  | isAtCrossRoad ghopos = let decidedDir = ghostDirectionDecider ghost_
-                            in ghost_ {ghostPos = goToDirection ghopos speed decidedDir, ghostDir = decidedDir}
-  | otherwise                = ghost_ {ghostPos = goToDirection ghopos speed ghodir}
-    where
-      speed = 1
+              -- Compute the score to for each validDirection to a given point
+              directionsWithScore :: Point -> [(Float, Direction)]
+              directionsWithScore desPos = zip (map (directionValue desPos) validDirections) validDirections
 
-isAtCrossRoad :: Point -> Bool
-isAtCrossRoad point = undefined -- implement checking if the ghost is at a crossroad
+              blinkyAlgoritm = snd $ bestDir (directionsWithScore pacPos_)
+              pinkyAlgoritm = snd $ bestDir (directionsWithScore (goToDirection pacPos_ 40 pacDir_))
+              clydeAlgoritm = snd $ clydeDir (directionsWithScore pacPos_)
+              inkyAlgoritm = snd $ bestDir (directionsWithScore inkyDesPos)
+              deadAlgoritm = snd $ bestDir (directionsWithScore middleOfGrid) -- Temporary for the place where they go when die
+              runAlgoritm = snd $ bestDir (directionsWithScore middleOfGrid) -- Temporary for the place where they go when run
 
-ghostDirectionDecider :: Ghost -> Direction
-ghostDirectionDecider g | gstate == Run   = undefined --implement diff move algorithms
-                        | gstate == Dead  = undefined
-                        | gtype == Blinky = undefined
-                        | gtype == Pinky  = undefined
-                        | gtype == Clyde  = undefined
-                        | otherwise       = undefined --inky
+              middleOfGrid = (x, y)
+                where 
+                  (x, y) = (200,-200)
+
+              inkyDesPos = ((x1 + x2) / 2, (y1 + y2) / 2) 
+                where 
+                  (x1, y1) = pacPos_
+                  (x2, y2) = ghostPos (getBlinky ghosts)
+
+                  getBlinky :: [Ghost] -> Ghost
+                  getBlinky (currGhost : ghostsB) | ghostType currGhost == Blinky = currGhost
+                                                  | otherwise = getBlinky ghostsB
+
+              clydeDir :: [(Float, Direction)] -> (Float, Direction)
+              clydeDir [] = error "don't give an empty list to this function"
+              clydeDir (x : xs)   = clydeDirHelper x xs
+
+              clydeDirHelper :: (Float, Direction) -> [(Float, Direction)] -> (Float, Direction)
+              clydeDirHelper currDir [] = currDir
+              clydeDirHelper currDir (x : xs) | fst x < fst currDir && fst x > 80 = clydeDirHelper x xs 
+                                              | otherwise                        = clydeDirHelper currDir xs
+
+              bestDir :: [(Float, Direction)] -> (Float, Direction)
+              bestDir [] = error "don't give an empty list to this function"
+              bestDir (x : xs)   = bestDirHelper x xs
+
+              bestDirHelper :: (Float, Direction) -> [(Float, Direction)] -> (Float, Direction)
+              bestDirHelper currDir [] = currDir
+              bestDirHelper currDir (x : xs) | fst x < fst currDir = bestDirHelper x xs 
+                                            | otherwise           = bestDirHelper currDir xs
+
+              directionValue :: Point -> Direction -> Float
+              directionValue desPos dir | dir == N  = distBetweenPacman (xg, yg + speed)
+                                        | dir == E  = distBetweenPacman (xg + speed, yg)
+                                        | dir == S  = distBetweenPacman (xg, yg - speed)
+                                        | otherwise = distBetweenPacman (xg - speed, yg) 
+                                          where
+                                            (xg, yg) = ghoPos_
+                                            (x1, y1) = desPos 
+                                            distBetweenPacman (x2, y2) = sqrt( (x2 - x1) ^ 2 + (y2 - y1) ^ 2)
+                            
+ghostStateCheck :: [Ghost] -> [Ghost]
+ghostStateCheck = map ghostStateCheck'
   where
-    gstate = ghostState g
-    gtype = ghostType g
+    ghostStateCheck' :: Ghost -> Ghost
+    ghostStateCheck' ghost | ghostState ghost == Dead && ghostPos ghost == (200,-200) = ghost{ghostState = Normal}
+                           | ghostState ghost == Run && ghostPos ghost == (200,-200) = ghost{ghostState = Normal}
+                           | otherwise = ghost
+                            where 
+                              --validPos (x, y)= 
+
 
 -- | Update the collision for the game state
 collision :: GameState -> GameState
